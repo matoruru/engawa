@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-// --- IDs (Zod v4) ---
+// Zod v4
 export const ConversationIdSchema = z.uuidv7().brand("ConversationId");
 export type ConversationId = z.infer<typeof ConversationIdSchema>;
 

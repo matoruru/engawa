@@ -1,18 +1,14 @@
 import * as z from "zod";
-
 import {
 	ConversationIdSchema,
 	type MessageId,
 	MessageIdSchema,
 	UserIdSchema,
-} from "./ids";
-import type {
-	ConversationMembersRepository,
-	ConversationReadsRepository,
-	ReadCursor,
-} from "./repos";
+} from "../../../shared/ids";
+import type { ConversationMembersRepository } from "../../conversations/ports";
+import type { ReadCursor } from "../domain";
+import type { ConversationReadsRepository } from "../ports";
 
-// I/O層で parse 済みを想定
 export const UpdateReadCursorInputSchema = z.object({
 	conversationId: ConversationIdSchema,
 	userId: UserIdSchema,
@@ -31,16 +27,12 @@ export type UpdateReadCursorResult =
 	| { kind: "ignored"; cursor: ReadCursor | null }
 	| { kind: "forbidden"; reason: "NOT_A_MEMBER" };
 
-/**
- * UUIDv7 は時系列でソート可能なので、文字列比較で “進んだ/戻った” を判定する。
- * 注意: 実装/保存形式が変わると壊れる可能性があるので、将来は createdAt 比較に置き換え可。
- */
+// UUIDv7 の文字列比較で単調増加を判定（MVP）
 const isNewerThan = (a: MessageId, b: MessageId): boolean => a > b;
 
 export const makeUpdateReadCursor =
 	(deps: UpdateReadCursorDeps) =>
 	async (input: UpdateReadCursorInput): Promise<UpdateReadCursorResult> => {
-		// 意味バリデーション：会話メンバーか？
 		const member = await deps.membersRepo.isMember(
 			input.conversationId,
 			input.userId,
@@ -52,7 +44,6 @@ export const makeUpdateReadCursor =
 			input.userId,
 		);
 
-		// 初回はそのまま保存
 		if (current === null) {
 			const next: ReadCursor = {
 				conversationId: input.conversationId,
@@ -64,12 +55,9 @@ export const makeUpdateReadCursor =
 			return { kind: "updated", cursor: next };
 		}
 
-		// 巻き戻り or 同じ なら無視
-		const shouldUpdate = isNewerThan(
-			input.lastReadMessageId,
-			current.lastReadMessageId,
-		);
-		if (!shouldUpdate) return { kind: "ignored", cursor: current };
+		if (!isNewerThan(input.lastReadMessageId, current.lastReadMessageId)) {
+			return { kind: "ignored", cursor: current };
+		}
 
 		const next: ReadCursor = {
 			...current,

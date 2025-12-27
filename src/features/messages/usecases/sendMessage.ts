@@ -1,34 +1,15 @@
 import * as z from "zod";
-
 import {
 	ClientMessageIdSchema,
 	ConversationIdSchema,
 	type MessageId,
-	MessageIdSchema,
 	UserIdSchema,
-} from "./ids";
-import type { ConversationMembersRepository } from "./repos";
+} from "../../../shared/ids";
+import type { ConversationMembersRepository } from "../../conversations/ports";
+import { type Message, type MessageText, MessageTextSchema } from "../domain";
+import type { InsertResult, MessageRepository } from "../ports";
 
-// --- Message fields ---
-export const MessageTextSchema = z
-	.string()
-	.min(1, "message_text must be non-empty")
-	.max(10000, "message_text is too long")
-	.brand("MessageText");
-export type MessageText = z.infer<typeof MessageTextSchema>;
-
-// --- Domain model ---
-export const MessageSchema = z.object({
-	messageId: MessageIdSchema,
-	conversationId: ConversationIdSchema,
-	senderId: UserIdSchema,
-	clientMessageId: ClientMessageIdSchema,
-	messageText: MessageTextSchema,
-	createdAt: z.date(),
-});
-export type Message = z.infer<typeof MessageSchema>;
-
-// --- Usecase input (parseはI/O層の責務にする方針) ---
+// I/O層で parse 済み前提。ただしI/O層が使えるように Schema は公開しておく
 export const SendMessageInputSchema = z.object({
 	conversationId: ConversationIdSchema,
 	senderId: UserIdSchema,
@@ -37,16 +18,6 @@ export const SendMessageInputSchema = z.object({
 });
 export type SendMessageInput = z.infer<typeof SendMessageInputSchema>;
 
-// --- Repository contracts ---
-export type InsertResult =
-	| { kind: "stored"; message: Message }
-	| { kind: "duplicate"; existing: Message };
-
-export interface MessageRepository {
-	insertOrGetByClientMessageId(message: Message): Promise<InsertResult>;
-}
-
-// --- Deps ---
 export interface SendMessageDeps {
 	membersRepo: ConversationMembersRepository;
 	messageRepo: MessageRepository;
@@ -54,7 +25,6 @@ export interface SendMessageDeps {
 	generateMessageId: () => MessageId;
 }
 
-// --- Usecase result ---
 export type SendMessageResult =
 	| { kind: "stored"; message: Message }
 	| { kind: "duplicate"; existing: Message }
@@ -63,7 +33,7 @@ export type SendMessageResult =
 export const makeSendMessage =
 	(deps: SendMessageDeps) =>
 	async (input: SendMessageInput): Promise<SendMessageResult> => {
-		// 意味バリデーション: 会話メンバーか？
+		// 意味バリデーション：会話メンバーか？
 		const member = await deps.membersRepo.isMember(
 			input.conversationId,
 			input.senderId,
@@ -75,12 +45,12 @@ export const makeSendMessage =
 			conversationId: input.conversationId,
 			senderId: input.senderId,
 			clientMessageId: input.clientMessageId,
-			messageText: input.messageText,
+			messageText: input.messageText as MessageText,
 			createdAt: deps.now(),
 		};
 
-		const res = await deps.messageRepo.insertOrGetByClientMessageId(message);
-
+		const res: InsertResult =
+			await deps.messageRepo.insertOrGetByClientMessageId(message);
 		if (res.kind === "stored") return { kind: "stored", message: res.message };
 		return { kind: "duplicate", existing: res.existing };
 	};
