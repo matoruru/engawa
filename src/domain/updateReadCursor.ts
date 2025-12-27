@@ -1,13 +1,16 @@
 import * as z from "zod";
 
 import {
-  type ConversationId,
-  type MessageId,
-  type UserId,
-  ConversationIdSchema,
-  MessageIdSchema,
-  UserIdSchema,
+	ConversationIdSchema,
+	type MessageId,
+	MessageIdSchema,
+	UserIdSchema,
 } from "./ids";
+import type {
+	ConversationMembersRepository,
+	ConversationReadsRepository,
+	ReadCursor,
+} from "./repos";
 
 // I/O層で parse 済みを想定
 export const UpdateReadCursorInputSchema = z.object({
@@ -16,32 +19,6 @@ export const UpdateReadCursorInputSchema = z.object({
 	lastReadMessageId: MessageIdSchema,
 });
 export type UpdateReadCursorInput = z.infer<typeof UpdateReadCursorInputSchema>;
-
-export interface ConversationMembersRepository {
-	isMember(conversationId: ConversationId, userId: UserId): Promise<boolean>;
-}
-
-export type ReadCursor = {
-	conversationId: ConversationId;
-	userId: UserId;
-	lastReadMessageId: MessageId;
-	updatedAt: Date;
-};
-
-export interface ConversationReadsRepository {
-	/**
-	 * 存在しなければ null
-	 */
-	get(
-		conversationId: ConversationId,
-		userId: UserId,
-	): Promise<ReadCursor | null>;
-
-	/**
-	 * lastReadMessageId を保存（upsert）
-	 */
-	upsert(cursor: ReadCursor): Promise<void>;
-}
 
 export interface UpdateReadCursorDeps {
 	membersRepo: ConversationMembersRepository;

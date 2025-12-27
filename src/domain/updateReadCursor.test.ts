@@ -3,9 +3,9 @@ import { ConversationIdSchema, MessageIdSchema, UserIdSchema } from "./ids";
 import {
 	type ConversationMembersRepository,
 	type ConversationReadsRepository,
-	makeUpdateReadCursor,
 	type ReadCursor,
-} from "./updateReadCursor";
+} from "./repos";
+import { makeUpdateReadCursor } from "./updateReadCursor";
 
 // --- Test doubles ---
 class InMemoryMembersRepo implements ConversationMembersRepository {

@@ -5,13 +5,11 @@ import {
 	MessageIdSchema,
 	UserIdSchema,
 } from "./ids";
-import {
-	type ConversationMembersRepository,
-	type Message,
-	type MessageRepository,
-	MessageTextSchema,
-	makeSendMessage,
-} from "./sendMessage";
+import { MessageTextSchema, makeSendMessage } from "./sendMessage";
+import type {
+	ConversationMembersRepository,
+} from "./repos";
+import type { Message, MessageRepository } from "./sendMessage";
 
 // --- Test doubles ---
 class InMemoryMessageRepo implements MessageRepository {

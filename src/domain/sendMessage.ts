@@ -2,13 +2,12 @@ import * as z from "zod";
 
 import {
 	ClientMessageIdSchema,
-	type ConversationId,
 	ConversationIdSchema,
 	type MessageId,
 	MessageIdSchema,
-	type UserId,
 	UserIdSchema,
 } from "./ids";
+import type { ConversationMembersRepository } from "./repos";
 
 // --- Message fields ---
 export const MessageTextSchema = z
@@ -45,10 +44,6 @@ export type InsertResult =
 
 export interface MessageRepository {
 	insertOrGetByClientMessageId(message: Message): Promise<InsertResult>;
-}
-
-export interface ConversationMembersRepository {
-	isMember(conversationId: ConversationId, userId: UserId): Promise<boolean>;
 }
 
 // --- Deps ---
