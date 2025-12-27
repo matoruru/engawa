@@ -1,15 +1,16 @@
 import { describe, expect, it } from "bun:test";
-
 import {
 	ClientMessageIdSchema,
 	ConversationIdSchema,
+	MessageIdSchema,
+	UserIdSchema,
+} from "./ids";
+import {
 	type ConversationMembersRepository,
 	type Message,
-	MessageIdSchema,
 	type MessageRepository,
 	MessageTextSchema,
 	makeSendMessage,
-	UserIdSchema,
 } from "./sendMessage";
 
 // --- Test doubles ---
