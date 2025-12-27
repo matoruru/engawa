@@ -32,7 +32,7 @@ export const MessageSchema = z.object({
 });
 export type Message = z.infer<typeof MessageSchema>;
 
-// --- Usecase input ---
+// --- Usecase input (parseはI/O層の責務にする方針) ---
 export const SendMessageInputSchema = z.object({
 	conversationId: ConversationIdSchema,
 	senderId: UserIdSchema,
@@ -41,8 +41,7 @@ export const SendMessageInputSchema = z.object({
 });
 export type SendMessageInput = z.infer<typeof SendMessageInputSchema>;
 
-// --- Repository contract ---
-// DB側で UNIQUE(conversation_id, sender_id, client_message_id) を貼る想定に合わせたIF
+// --- Repository contracts ---
 export type InsertResult =
 	| { kind: "stored"; message: Message }
 	| { kind: "duplicate"; existing: Message };
@@ -51,23 +50,33 @@ export interface MessageRepository {
 	insertOrGetByClientMessageId(message: Message): Promise<InsertResult>;
 }
 
+export interface ConversationMembersRepository {
+	isMember(conversationId: ConversationId, userId: UserId): Promise<boolean>;
+}
+
 // --- Deps ---
 export interface SendMessageDeps {
-	repo: MessageRepository;
+	membersRepo: ConversationMembersRepository;
+	messageRepo: MessageRepository;
 	now: () => Date;
 	generateMessageId: () => MessageId;
 }
 
-// --- Usecase ---
+// --- Usecase result ---
 export type SendMessageResult =
 	| { kind: "stored"; message: Message }
-	| { kind: "duplicate"; existing: Message };
+	| { kind: "duplicate"; existing: Message }
+	| { kind: "forbidden"; reason: "NOT_A_MEMBER" };
 
 export const makeSendMessage =
 	(deps: SendMessageDeps) =>
-	async (rawInput: SendMessageInput): Promise<SendMessageResult> => {
-		// 入力は「すでに型が正しい」想定でも、ドメイン境界で再検証しておくと安心
-		const input = SendMessageInputSchema.parse(rawInput);
+	async (input: SendMessageInput): Promise<SendMessageResult> => {
+		// 意味バリデーション: 会話メンバーか？
+		const member = await deps.membersRepo.isMember(
+			input.conversationId,
+			input.senderId,
+		);
+		if (!member) return { kind: "forbidden", reason: "NOT_A_MEMBER" };
 
 		const message: Message = {
 			messageId: deps.generateMessageId(),
@@ -78,7 +87,7 @@ export const makeSendMessage =
 			createdAt: deps.now(),
 		};
 
-		const res = await deps.repo.insertOrGetByClientMessageId(message);
+		const res = await deps.messageRepo.insertOrGetByClientMessageId(message);
 
 		if (res.kind === "stored") return { kind: "stored", message: res.message };
 		return { kind: "duplicate", existing: res.existing };
