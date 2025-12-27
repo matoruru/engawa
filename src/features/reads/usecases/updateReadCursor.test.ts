@@ -42,6 +42,7 @@ class InMemoryReadsRepo implements ConversationReadsRepository {
   }
 }
 
+// 実行されたかどうかをテストするためのラッパー
 class SpyReadsRepo implements ConversationReadsRepository {
   public getCalled = 0;
   public upsertCalled = 0;

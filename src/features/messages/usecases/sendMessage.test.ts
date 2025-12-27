@@ -42,6 +42,7 @@ class InMemoryMessageRepo implements MessageRepository {
   }
 }
 
+// 実行されたかどうかをテストするためのラッパー
 class SpyMessageRepo implements MessageRepository {
   public called = 0;
   constructor(private readonly inner: MessageRepository) {}
