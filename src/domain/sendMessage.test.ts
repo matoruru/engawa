@@ -1,110 +1,119 @@
-// src/domain/sendMessage.test.ts
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
 import {
-  makeSendMessage,
-  type Message,
-  type MessageRepository,
-  ConversationIdSchema,
-  UserIdSchema,
-  ClientMessageIdSchema,
-  MessageTextSchema,
-  MessageIdSchema,
+	ClientMessageIdSchema,
+	ConversationIdSchema,
+	type Message,
+	MessageIdSchema,
+	type MessageRepository,
+	MessageTextSchema,
+	makeSendMessage,
+	UserIdSchema,
 } from "./sendMessage";
 
 // --- Test double (最小) ---
 // DB再実装にならないよう「重複排除キーでMapするだけ」に割り切る
 class InMemoryMessageRepo implements MessageRepository {
-  private readonly byDedupeKey = new Map<string, Message>();
+	private readonly byDedupeKey = new Map<string, Message>();
 
-  async insertOrGetByClientMessageId(message: Message) {
-    const key = [
-      message.conversationId,
-      message.senderId,
-      message.clientMessageId,
-    ].join("|");
+	async insertOrGetByClientMessageId(message: Message) {
+		const key = [
+			message.conversationId,
+			message.senderId,
+			message.clientMessageId,
+		].join("|");
 
-    const existing = this.byDedupeKey.get(key);
-    if (existing) return { kind: "duplicate" as const, existing };
+		const existing = this.byDedupeKey.get(key);
+		if (existing) return { kind: "duplicate" as const, existing };
 
-    this.byDedupeKey.set(key, message);
-    return { kind: "stored" as const, message };
-  }
+		this.byDedupeKey.set(key, message);
+		return { kind: "stored" as const, message };
+	}
 }
 
 // 使い回し用の固定値
 const cid = ConversationIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e10");
 const uid = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e11");
-const cmid = ClientMessageIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e12");
+const cmid = ClientMessageIdSchema.parse(
+	"01890b42-8d57-7b8f-9f2b-ef2d6c1f6e12",
+);
 const text = MessageTextSchema.parse("hello");
 
 describe("sendMessage (domain)", () => {
-  it("stores a new message (stored)", async () => {
-    const repo = new InMemoryMessageRepo();
+	it("stores a new message (stored)", async () => {
+		const repo = new InMemoryMessageRepo();
 
-    // messageId生成も時間も固定して、テストを決定的にする
-    const fixedMessageId = MessageIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e13");
+		// messageId生成も時間も固定して、テストを決定的にする
+		const fixedMessageId = MessageIdSchema.parse(
+			"01890b42-8d57-7b8f-9f2b-ef2d6c1f6e13",
+		);
 
-    const sendMessage = makeSendMessage({
-      repo,
-      now: () => new Date("2025-12-27T00:00:00.000Z"),
-      generateMessageId: () => fixedMessageId,
-    });
+		const sendMessage = makeSendMessage({
+			repo,
+			now: () => new Date("2025-12-27T00:00:00.000Z"),
+			generateMessageId: () => fixedMessageId,
+		});
 
-    const res = await sendMessage({
-      conversationId: cid,
-      senderId: uid,
-      clientMessageId: cmid,
-      messageText: text,
-    });
+		const res = await sendMessage({
+			conversationId: cid,
+			senderId: uid,
+			clientMessageId: cmid,
+			messageText: text,
+		});
 
-    expect(res.kind).toBe("stored");
-    if (res.kind === "stored") {
-      expect(res.message.messageId).toBe(fixedMessageId);
-      expect(res.message.conversationId).toBe(cid);
-      expect(res.message.senderId).toBe(uid);
-      expect(res.message.clientMessageId).toBe(cmid);
-      expect(res.message.messageText).toBe(text);
-      expect(res.message.createdAt.toISOString()).toBe("2025-12-27T00:00:00.000Z");
-    }
-  });
+		expect(res.kind).toBe("stored");
+		if (res.kind === "stored") {
+			expect(res.message.messageId).toBe(fixedMessageId);
+			expect(res.message.conversationId).toBe(cid);
+			expect(res.message.senderId).toBe(uid);
+			expect(res.message.clientMessageId).toBe(cmid);
+			expect(res.message.messageText).toBe(text);
+			expect(res.message.createdAt.toISOString()).toBe(
+				"2025-12-27T00:00:00.000Z",
+			);
+		}
+	});
 
-  it("deduplicates by (conversation_id, sender_id, client_message_id) (duplicate)", async () => {
-    const repo = new InMemoryMessageRepo();
+	it("deduplicates by (conversation_id, sender_id, client_message_id) (duplicate)", async () => {
+		const repo = new InMemoryMessageRepo();
 
-    const sendMessage1 = makeSendMessage({
-      repo,
-      now: () => new Date("2025-12-27T00:00:00.000Z"),
-      generateMessageId: () => MessageIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e20"),
-    });
+		const sendMessage1 = makeSendMessage({
+			repo,
+			now: () => new Date("2025-12-27T00:00:00.000Z"),
+			generateMessageId: () =>
+				MessageIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e20"),
+		});
 
-    const sendMessage2 = makeSendMessage({
-      repo,
-      now: () => new Date("2025-12-27T00:00:01.000Z"),
-      generateMessageId: () => MessageIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e21"),
-    });
+		const sendMessage2 = makeSendMessage({
+			repo,
+			now: () => new Date("2025-12-27T00:00:01.000Z"),
+			generateMessageId: () =>
+				MessageIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e21"),
+		});
 
-    const first = await sendMessage1({
-      conversationId: cid,
-      senderId: uid,
-      clientMessageId: cmid,
-      messageText: text,
-    });
+		const first = await sendMessage1({
+			conversationId: cid,
+			senderId: uid,
+			clientMessageId: cmid,
+			messageText: text,
+		});
 
-    const second = await sendMessage2({
-      conversationId: cid,
-      senderId: uid,
-      clientMessageId: cmid, // 同じ client_message_id を再送
-      messageText: text,
-    });
+		const second = await sendMessage2({
+			conversationId: cid,
+			senderId: uid,
+			clientMessageId: cmid, // 同じ client_message_id を再送
+			messageText: text,
+		});
 
-    expect(first.kind).toBe("stored");
-    expect(second.kind).toBe("duplicate");
+		expect(first.kind).toBe("stored");
+		expect(second.kind).toBe("duplicate");
 
-    if (first.kind === "stored" && second.kind === "duplicate") {
-      // “2回目”が新しい messageId で保存されない（＝二重登録されない）ことが本質
-      expect(second.existing.messageId).toBe(first.message.messageId);
-      expect(second.existing.createdAt.toISOString()).toBe("2025-12-27T00:00:00.000Z");
-    }
-  });
+		if (first.kind === "stored" && second.kind === "duplicate") {
+			// “2回目”が新しい messageId で保存されない（＝二重登録されない）ことが本質
+			expect(second.existing.messageId).toBe(first.message.messageId);
+			expect(second.existing.createdAt.toISOString()).toBe(
+				"2025-12-27T00:00:00.000Z",
+			);
+		}
+	});
 });
