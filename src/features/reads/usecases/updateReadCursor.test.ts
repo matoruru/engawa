@@ -5,7 +5,7 @@ import {
 	MessageIdSchema,
 	UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "../../conversations/ports";
+import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { ReadCursor } from "../domain";
 import type { ConversationReadsRepository } from "../ports";
 import { makeUpdateReadCursor } from "./updateReadCursor";
