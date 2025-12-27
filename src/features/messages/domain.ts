@@ -1,10 +1,10 @@
-import * as z from "zod";
 import {
 	ClientMessageIdSchema,
 	ConversationIdSchema,
 	MessageIdSchema,
 	UserIdSchema,
-} from "../../shared/ids";
+} from "@/shared/ids";
+import * as z from "zod";
 
 // テキストは機能依存（messages featureのドメイン）に置く
 export const MessageTextSchema = z

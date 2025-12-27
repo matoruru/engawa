@@ -1,10 +1,10 @@
-import * as z from "zod";
 import {
 	ConversationIdSchema,
 	type MessageId,
 	MessageIdSchema,
 	UserIdSchema,
-} from "../../../shared/ids";
+} from "@/shared/ids";
+import * as z from "zod";
 import type { ConversationMembersRepository } from "../../conversations/ports";
 import type { ReadCursor } from "../domain";
 import type { ConversationReadsRepository } from "../ports";

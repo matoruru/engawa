@@ -4,7 +4,7 @@ import {
 	ConversationIdSchema,
 	MessageIdSchema,
 	UserIdSchema,
-} from "../../../shared/ids";
+} from "@/shared/ids";
 import type { ConversationMembersRepository } from "../../conversations/ports";
 import type { ReadCursor } from "../domain";
 import type { ConversationReadsRepository } from "../ports";

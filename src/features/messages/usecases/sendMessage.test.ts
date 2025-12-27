@@ -5,7 +5,7 @@ import {
 	ConversationIdSchema,
 	MessageIdSchema,
 	UserIdSchema,
-} from "../../../shared/ids";
+} from "@/shared/ids";
 import type { ConversationMembersRepository } from "../../conversations/ports";
 import { type Message, MessageTextSchema } from "../domain";
 import type { MessageRepository } from "../ports";

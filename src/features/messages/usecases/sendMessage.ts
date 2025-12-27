@@ -1,10 +1,10 @@
-import * as z from "zod";
 import {
 	ClientMessageIdSchema,
 	ConversationIdSchema,
 	type MessageId,
 	UserIdSchema,
-} from "../../../shared/ids";
+} from "@/shared/ids";
+import * as z from "zod";
 import type { ConversationMembersRepository } from "../../conversations/ports";
 import { type Message, type MessageText, MessageTextSchema } from "../domain";
 import type { InsertResult, MessageRepository } from "../ports";

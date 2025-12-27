@@ -1,4 +1,4 @@
-import type { ConversationId, MessageId, UserId } from "../../shared/ids";
+import type { ConversationId, MessageId, UserId } from "@/shared/ids";
 
 export type ReadCursor = {
 	conversationId: ConversationId;

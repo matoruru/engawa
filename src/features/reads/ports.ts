@@ -1,4 +1,4 @@
-import type { ConversationId, UserId } from "../../shared/ids";
+import type { ConversationId, UserId } from "@/shared/ids";
 import type { ReadCursor } from "./domain";
 
 export interface ConversationReadsRepository {
