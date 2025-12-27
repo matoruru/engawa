@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test";
 
 import {
   ClientMessageIdSchema,
+  type ConversationId,
   ConversationIdSchema,
   MessageIdSchema,
+  type UserId,
   UserIdSchema,
 } from "@/shared/ids";
 import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
@@ -14,10 +16,13 @@ import { makeSendMessage } from "./sendMessage";
 // --- Test doubles ---
 class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly members = new Set<string>();
-  addMember(conversationId: string, userId: string): void {
+  addMember(conversationId: ConversationId, userId: UserId): void {
     this.members.add(`${conversationId}|${userId}`);
   }
-  async isMember(conversationId: any, userId: any): Promise<boolean> {
+  async isMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<boolean> {
     return this.members.has(`${conversationId}|${userId}`);
   }
 }
