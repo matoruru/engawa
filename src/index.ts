@@ -1,7 +1,18 @@
 import { Elysia } from "elysia";
+import { env } from "@/shared/env";
+import { composeApp } from "./app/compose";
+import { makeHttpHandlers } from "./app/httpHandlers";
+import { makeWsApp } from "./app/ws";
 
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
+const services = composeApp();
+const handlers = makeHttpHandlers(services);
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+const app = new Elysia()
+  .use(makeWsApp(services))
+  .get("/healthz", () => ({ ok: true }))
+  .post("/messages/send", async ({ body }) => handlers.sendMessage(body))
+  .post("/messages/sync", async ({ body }) => handlers.syncMessages(body))
+  .post("/reads/update", async ({ body }) => handlers.updateReadCursor(body))
+  .listen(env.PORT);
+
+console.log(`Listening on http://localhost:${env.PORT}`);

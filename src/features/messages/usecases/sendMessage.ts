@@ -6,7 +6,7 @@ import {
   UserIdSchema,
 } from "@/shared/ids";
 import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
-import { type Message, type MessageText, MessageTextSchema } from "../domain";
+import { type Message, MessageTextSchema } from "../domain";
 import type { InsertResult, MessageRepository } from "../ports";
 
 // I/O層で parse 済み前提。ただしI/O層が使えるように Schema は公開しておく
@@ -45,7 +45,7 @@ export const makeSendMessage =
       conversationId: input.conversationId,
       senderId: input.senderId,
       clientMessageId: input.clientMessageId,
-      messageText: input.messageText as MessageText,
+      messageText: input.messageText,
       createdAt: deps.now(),
     };
 
