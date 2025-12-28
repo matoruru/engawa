@@ -11,7 +11,13 @@
     "db:ps": "docker compose ps",
     "db:reset": "docker compose down -v && docker compose up -d",
     "db:psql": "docker exec -it chat-postgres psql -U chat -d chat",
-    "db:sh": "docker exec -it chat-postgres sh"
+    "db:sh": "docker exec -it chat-postgres sh",
+    "db:migrate:new": "dbmate new",
+    "db:migrate:up": "dbmate up",
+    "db:migrate:rollback": "dbmate rollback",
+    "db:migrate:status": "dbmate status",
+    "db:migrate:wait": "dbmate wait",
+    "db:migrate:dump": "dbmate dump"
   },
   "dependencies": {
     "elysia": "^1.4.19",
