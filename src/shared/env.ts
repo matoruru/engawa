@@ -2,6 +2,13 @@ import * as z from "zod";
 
 const EnvSchema = z.object({
   POSTGRES_URL: z.string().min(1),
+
+  // セッショントークン（JWT）検証用
+  SESSION_JWT_SECRET: z.string().min(1),
+
+  // Cookie名（ブラウザ用。デフォルト）
+  SESSION_COOKIE_NAME: z.string().min(1).default("session"),
+
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
   PORT: z
     .string()
