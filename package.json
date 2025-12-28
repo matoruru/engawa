@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.10",
+    "@types/ws": "^8.18.1",
     "bun-types": "latest",
     "dbmate": "^2.28.0",
     "ws": "^8.18.3"
