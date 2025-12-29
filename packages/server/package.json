@@ -1,6 +1,6 @@
 {
-  "name": "kaiwa",
-  "version": "1.0.50",
+  "name": "kaiwa-server",
+  "version": "0.0.0",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:e2e:usecases": "bun test test/e2e/usecases",
