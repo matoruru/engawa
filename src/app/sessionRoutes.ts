@@ -2,8 +2,8 @@ import { Elysia, t } from "elysia";
 import * as z from "zod";
 
 import { issueSessionJwt } from "@/shared/auth/issueSessionJwt";
-import { env } from "@/shared/env";
 import { type UserId, UserIdSchema } from "@/shared/ids";
+import { isProdRuntime } from "@/shared/runtime";
 
 const CreateSessionBodySchema = z.object({
   // 開発用：任意の userId を入れてログインする
@@ -14,7 +14,7 @@ export const sessionRoutes = new Elysia()
   .post(
     "/session",
     async ({ body, cookie, status }) => {
-      if (env.NODE_ENV === "production" || env.NODE_ENV === undefined) {
+      if (isProdRuntime()) {
         return status(404, { error: "Not found" });
       }
 
@@ -46,7 +46,7 @@ export const sessionRoutes = new Elysia()
   .delete(
     "/session",
     ({ cookie, status }) => {
-      if (env.NODE_ENV === "production" || env.NODE_ENV === undefined) {
+      if (isProdRuntime()) {
         return status(404, { error: "Not found" });
       }
 

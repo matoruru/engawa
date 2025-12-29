@@ -498,4 +498,25 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       await Promise.all([closeWs(wsAlice), closeWs(wsBob)]);
     }
   });
+
+  it("POST /session returns 404 when NODE_ENV=production since it's for development only", async () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      const res = await fetch(`${baseUrl}/session`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: uidAlice }),
+      });
+
+      expect(res.status).toBe(404);
+    } finally {
+      // 他テストへ影響させないように環境変数を復元する
+      if (prev === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = prev;
+      }
+    }
+  });
 });

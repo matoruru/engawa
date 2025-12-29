@@ -4,11 +4,10 @@ import { extractBearer, verifySessionJwt } from "@/shared/auth/sessionJwt";
 import { env } from "@/shared/env";
 import type { UserId } from "@/shared/ids";
 import { UserIdSchema } from "@/shared/ids";
+import { isProdRuntime } from "@/shared/runtime";
 import { auth } from "./auth";
 import type { AppServices } from "./compose";
 import { WsClientEventSchema, wsEncode } from "./wsTypes";
-
-const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
 
 /**
  * Elysia WS の ws.data.headers は環境/型によって揺れるので、Headers に正規化する。
@@ -70,7 +69,7 @@ const resolveUserIdForWs = async (
   const headers = toHeaders(rawHeaders);
 
   // --- Dev/Test fallback（既存の wsChatFlow.test.ts を壊さないため） ---
-  if (!isProd) {
+  if (!isProdRuntime()) {
     const authz = headers.get("authorization") ?? undefined;
     const bearer = extractBearer(authz);
 
