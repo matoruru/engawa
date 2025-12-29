@@ -1,5 +1,6 @@
+import z from "zod";
 import { env } from "@/shared/env";
-import { MessageIdSchema } from "@/shared/ids";
+import { MessageIdSchema, type UserId, UserIdSchema } from "@/shared/ids";
 import {
   createPostgresClient,
   type PostgresClient,
@@ -25,8 +26,13 @@ import {
   type UpdateReadCursorResult,
 } from "../features/reads/usecases/updateReadCursor";
 
+const UserIdRowSchema = z.object({ user_id: z.string() });
+
 export type AppServices = {
   db: PostgresClient;
+  resolveAppUserIdFromBetterAuthUserId: (
+    authUserId: string,
+  ) => Promise<UserId | null>;
   sendMessage: (input: SendMessageInput) => Promise<SendMessageResult>;
   syncMessages: (input: SyncMessagesInput) => Promise<SyncMessagesResult>;
   updateReadCursor: (
@@ -36,6 +42,21 @@ export type AppServices = {
 
 export const composeApp = (): AppServices => {
   const db = createPostgresClient(env.POSTGRES_URL);
+
+  const resolveAppUserIdFromAuthUserId = async (
+    authUserId: string,
+  ): Promise<UserId | null> => {
+    const rows = await db`
+      SELECT user_id
+      FROM user_identities
+      WHERE provider = 'better-auth'
+        AND provider_subject = ${authUserId}
+      LIMIT 1
+    `;
+    if (rows.length === 0) return null;
+    const parsed = UserIdRowSchema.parse(rows[0]);
+    return UserIdSchema.parse(parsed.user_id) as UserId;
+  };
 
   // shared port
   const membersRepo = makePostgresConversationMembersRepo(db);
@@ -70,6 +91,7 @@ export const composeApp = (): AppServices => {
 
   return {
     db,
+    resolveAppUserIdFromBetterAuthUserId: resolveAppUserIdFromAuthUserId,
     sendMessage,
     syncMessages,
     updateReadCursor,

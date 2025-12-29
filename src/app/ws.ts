@@ -1,8 +1,106 @@
+// src/app/ws.ts
 import { Elysia, t } from "elysia";
 import { extractBearer, verifySessionJwt } from "@/shared/auth/sessionJwt";
+import { env } from "@/shared/env";
 import type { UserId } from "@/shared/ids";
+import { UserIdSchema } from "@/shared/ids";
+import { auth } from "./auth";
 import type { AppServices } from "./compose";
 import { WsClientEventSchema, wsEncode } from "./wsTypes";
+
+const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
+
+/**
+ * Elysia WS の ws.data.headers は環境/型によって揺れるので、Headers に正規化する。
+ */
+const toHeaders = (h: unknown): Headers => {
+  if (h instanceof Headers) return h;
+
+  const headers = new Headers();
+
+  if (h && typeof h === "object") {
+    for (const [k, v] of Object.entries(h as Record<string, unknown>)) {
+      if (typeof v === "string") headers.set(k, v);
+      else if (Array.isArray(v))
+        headers.set(k, v.filter((x) => typeof x === "string").join(","));
+    }
+  }
+
+  return headers;
+};
+
+const extractCookie = (
+  cookieHeader: string | null,
+  name: string,
+): string | undefined => {
+  if (!cookieHeader) return undefined;
+  const m = new RegExp(String.raw`(?:^|;\s*)${name}=([^;]+)`).exec(
+    cookieHeader,
+  );
+  return m?.[1];
+};
+
+const resolveAppUserIdFromBetterAuthUserId = async (
+  svc: AppServices,
+  betterAuthUserId: string,
+): Promise<UserId | null> => {
+  const rows = await svc.db`
+    SELECT user_id
+    FROM user_identities
+    WHERE provider = ${"better-auth"}
+      AND provider_subject = ${betterAuthUserId}
+    LIMIT 1
+  `;
+
+  if (rows.length !== 1) return null;
+
+  // DBの user_id は uuid(v7) の文字列
+  return UserIdSchema.parse(rows[0]?.user_id);
+};
+
+/**
+ * WS接続の認証：
+ * - production: BetterAuth のセッションから user を得て、user_identities で apps.users.id を解決
+ * - development/test: 既存E2Eのために「session JWT」も許可（後で削除可能）
+ */
+const resolveUserIdForWs = async (
+  svc: AppServices,
+  rawHeaders: unknown,
+): Promise<UserId | null> => {
+  const headers = toHeaders(rawHeaders);
+
+  // --- Dev/Test fallback（既存の wsChatFlow.test.ts を壊さないため） ---
+  if (!isProd) {
+    const authz = headers.get("authorization") ?? undefined;
+    const bearer = extractBearer(authz);
+
+    // 既存テストは Cookie: session=... を使う
+    const cookieHeader = headers.get("cookie");
+    const cookieToken = extractCookie(
+      cookieHeader,
+      env.SESSION_COOKIE_NAME ?? "session",
+    );
+
+    const token = bearer ?? cookieToken;
+    if (token) {
+      try {
+        return await verifySessionJwt(token);
+      } catch {
+        // ignore and fallthrough to BetterAuth
+      }
+    }
+  }
+
+  // --- BetterAuth ---
+  const session = await auth.api.getSession({ headers });
+  if (!session) return null;
+
+  const appUserId = await resolveAppUserIdFromBetterAuthUserId(
+    svc,
+    session.user.id,
+  );
+  return appUserId;
+};
 
 export const makeWsApp = (svc: AppServices) => {
   const rooms = new Map<string, Set<string>>();
@@ -48,23 +146,17 @@ export const makeWsApp = (svc: AppServices) => {
   return new Elysia().ws("/ws", {
     body: t.Any(),
 
+    // BetterAuth は Cookie/Authorization を headers から読むので、ここは広めに受ける
     header: t.Object({
       authorization: t.Optional(t.String()),
-    }),
-    cookie: t.Cookie({
-      session: t.Optional(t.String()),
+      cookie: t.Optional(t.String()),
     }),
 
     async open(ws) {
       sockets.set(ws.id, ws);
 
-      const authorization = ws.data.headers.authorization;
-      const bearer = extractBearer(authorization);
-
-      const cookieToken = ws.data.cookie.session.value;
-
-      const token = bearer ?? cookieToken;
-      if (!token) {
+      const userId = await resolveUserIdForWs(svc, ws.data.headers);
+      if (!userId) {
         ws.send(
           wsEncode({
             type: "server.error",
@@ -75,21 +167,8 @@ export const makeWsApp = (svc: AppServices) => {
         return;
       }
 
-      try {
-        const userId = await verifySessionJwt(token);
-        userIdBySocket.set(ws.id, userId);
-        ws.send(
-          wsEncode({ type: "server.hello", payload: { socketId: ws.id } }),
-        );
-      } catch {
-        ws.send(
-          wsEncode({
-            type: "server.error",
-            payload: { reason: "UNAUTHORIZED" },
-          }),
-        );
-        ws.close();
-      }
+      userIdBySocket.set(ws.id, userId);
+      ws.send(wsEncode({ type: "server.hello", payload: { socketId: ws.id } }));
     },
 
     async message(ws, message) {
@@ -144,6 +223,7 @@ export const makeWsApp = (svc: AppServices) => {
           case "forbidden":
             ws.send(wsEncode({ type: "message.rejected", payload: res }));
             return;
+
           case "stored":
             join(evt.payload.conversationId, ws.id);
             broadcast(evt.payload.conversationId, {
@@ -151,6 +231,7 @@ export const makeWsApp = (svc: AppServices) => {
               payload: res.message,
             });
             return;
+
           case "duplicate":
             join(evt.payload.conversationId, ws.id);
             broadcast(evt.payload.conversationId, {

@@ -9,6 +9,11 @@ const EnvSchema = z.object({
   // Cookie名（ブラウザ用。デフォルト）
   SESSION_COOKIE_NAME: z.string().min(1).default("session"),
 
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.url(),
+  BETTER_AUTH_GOOGLE_CLIENT_ID: z.string().nonempty(),
+  BETTER_AUTH_GOOGLE_CLIENT_SECRET: z.string().nonempty(),
+
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
   PORT: z
     .string()
