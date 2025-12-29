@@ -135,9 +135,17 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
   const cid = ConversationIdSchema.parse(
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e10",
   );
-  const uid = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e11");
-  const cmid = ClientMessageIdSchema.parse(
-    "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e12",
+
+  // users（2人）
+  const uidAlice = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e11");
+  const uidBob = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e12");
+
+  // client message ids（送信者ごとに別）
+  const cmidAlice = ClientMessageIdSchema.parse(
+    "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e13",
+  );
+  const cmidBob = ClientMessageIdSchema.parse(
+    "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e14",
   );
 
   const mid1: MessageId = MessageIdSchema.parse(
@@ -146,11 +154,27 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
   const mid2: MessageId = MessageIdSchema.parse(
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e21",
   );
+  const mid3: MessageId = MessageIdSchema.parse(
+    "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e22",
+  );
+  const mid4: MessageId = MessageIdSchema.parse(
+    "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e23",
+  );
 
   let app: Elysia;
   let baseUrl: string;
   let wsUrl: string;
   let queryRepo: ReturnType<typeof makePostgresMessageQueryRepo>;
+
+  const idQueue: readonly MessageId[] = [mid1, mid2, mid3, mid4];
+  let idIndex = 0;
+
+  const generateMessageId = (): MessageId => {
+    const v = idQueue[idIndex];
+    if (!v) throw new Error("messageId queue exhausted");
+    idIndex += 1;
+    return v;
+  };
 
   beforeAll(async () => {
     await db`SELECT 1 as ok`;
@@ -160,15 +184,6 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     const messageRepo = makePostgresMessageRepo(db);
     const readsRepo = makePostgresConversationReadsRepo(db);
     queryRepo = makePostgresMessageQueryRepo(db);
-
-    const ids: readonly MessageId[] = [mid1, mid2];
-    let i = 0;
-    const generateMessageId = (): MessageId => {
-      const v = ids[i];
-      if (!v) throw new Error("messageId queue exhausted");
-      i += 1;
-      return v;
-    };
 
     const sendMessage = makeSendMessage({
       membersRepo,
@@ -199,10 +214,17 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
   });
 
   beforeEach(async () => {
+    idIndex = 0;
     await resetDb(db);
-    await seedUser(db, { id: uid, username: "alice", displayName: "Alice" });
+    await seedUser(db, {
+      id: uidAlice,
+      username: "alice",
+      displayName: "Alice",
+    });
+    await seedUser(db, { id: uidBob, username: "bob", displayName: "Bob" });
     await seedConversation(db, { id: cid });
-    await seedMember(db, { conversationId: cid, userId: uid });
+    await seedMember(db, { conversationId: cid, userId: uidAlice });
+    await seedMember(db, { conversationId: cid, userId: uidBob });
   });
 
   afterAll(async () => {
@@ -215,7 +237,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     const res = await fetch(`${baseUrl}/session`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userId: uid }),
+      body: JSON.stringify({ userId: uidAlice }),
     });
 
     expect(res.status).toBe(200);
@@ -242,7 +264,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
         type: "message.send",
         payload: {
           conversationId: cid,
-          clientMessageId: cmid,
+          clientMessageId: cmidAlice,
           messageText: "hello",
         },
       }),
@@ -256,8 +278,8 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     const payload = MessageCreatedPayloadSchema.parse(created.payload);
 
     expect(payload.conversationId).toBe(cid);
-    expect(payload.senderId).toBe(uid);
-    expect(payload.clientMessageId).toBe(cmid);
+    expect(payload.senderId).toBe(uidAlice);
+    expect(payload.clientMessageId).toBe(cmidAlice);
     expect(payload.messageText).toBe(MessageTextSchema.parse("hello"));
     expect(payload.messageId).toBe(mid1);
 
@@ -269,7 +291,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     const res = await fetch(`${baseUrl}/session`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userId: uid }),
+      body: JSON.stringify({ userId: uidAlice }),
     });
     expect(res.status).toBe(200);
 
@@ -294,7 +316,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
         type: "message.send",
         payload: {
           conversationId: cid,
-          clientMessageId: cmid,
+          clientMessageId: cmidAlice,
           messageText: "hello",
         },
       }),
@@ -309,13 +331,13 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
         type: "message.send",
         payload: {
           conversationId: cid,
-          clientMessageId: cmid,
+          clientMessageId: cmidAlice,
           messageText: "hello",
         },
       }),
     );
 
-    // 5) “二重登録されてない” を QueryRepo で検証（生SQLなし）
+    // 5) “二重登録されてない” を QueryRepo で検証
     // ※このテストファイルで beforeAll で作っている queryRepo を使う形が一番ラク
     const listed = await queryRepo.listByConversation({
       conversationId: cid,
@@ -325,8 +347,158 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
 
     expect(listed.length).toBe(1);
     expect(listed[0]?.messageId).toBe(firstId);
-    expect(listed[0]?.clientMessageId).toBe(cmid);
+    expect(listed[0]?.clientMessageId).toBe(cmidAlice);
 
     ws.close();
+  });
+
+  it("two users: subscribe via messages.sync, exchange messages, and both receive message.created", async () => {
+    const createSessionCookie = async (userId: string): Promise<string> => {
+      const res = await fetch(`${baseUrl}/session`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      expect(res.status).toBe(200);
+
+      const setCookie = res.headers.get("set-cookie");
+      if (!setCookie) throw new Error("missing set-cookie");
+
+      return extractSessionCookie(setCookie);
+    };
+
+    const connectWs = async (cookieHeader: string): Promise<WebSocket> => {
+      const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieHeader } });
+
+      await new Promise<void>((resolve, reject) => {
+        ws.once("open", () => resolve());
+        ws.once("error", (e) => reject(e));
+      });
+
+      await waitForWsMessage(ws, (m) => m.type === "server.hello");
+      return ws;
+    };
+
+    // 1) セッション cookie 発行
+    const [cookieAlice, cookieBob] = await Promise.all([
+      createSessionCookie(uidAlice),
+      createSessionCookie(uidBob),
+    ]);
+
+    // 2) WS接続
+    const [wsAlice, wsBob] = await Promise.all([
+      connectWs(cookieAlice),
+      connectWs(cookieBob),
+    ]);
+
+    try {
+      // 3) 両者が購読開始（messages.sync → join）
+      const pSyncedAlice = waitForWsMessage(
+        wsAlice,
+        (m) => m.type === "messages.synced",
+      );
+      wsAlice.send(
+        JSON.stringify({
+          type: "messages.sync",
+          payload: {
+            conversationId: cid,
+            afterMessageId: undefined,
+            limit: 50,
+          },
+        }),
+      );
+
+      const pSyncedBob = waitForWsMessage(
+        wsBob,
+        (m) => m.type === "messages.synced",
+      );
+      wsBob.send(
+        JSON.stringify({
+          type: "messages.sync",
+          payload: {
+            conversationId: cid,
+            afterMessageId: undefined,
+            limit: 50,
+          },
+        }),
+      );
+
+      const syncedAlice = await pSyncedAlice;
+      const syncedBob = await pSyncedBob;
+
+      expect((syncedAlice.payload as { kind?: string })?.kind).toBe("ok");
+      expect((syncedBob.payload as { kind?: string })?.kind).toBe("ok");
+
+      // 4) Alice -> Bob（レース回避：先に待つ）
+      const pCreatedOnBob = waitForWsMessage(
+        wsBob,
+        (m) => m.type === "message.created",
+      );
+
+      wsAlice.send(
+        JSON.stringify({
+          type: "message.send",
+          payload: {
+            conversationId: cid,
+            clientMessageId: cmidAlice,
+            messageText: "hi bob",
+          },
+        }),
+      );
+
+      const createdOnBob = await pCreatedOnBob;
+      const bobReceived = MessageCreatedPayloadSchema.parse(
+        createdOnBob.payload,
+      );
+
+      expect(bobReceived.conversationId).toBe(cid);
+      expect(bobReceived.senderId).toBe(uidAlice);
+      expect(bobReceived.clientMessageId).toBe(cmidAlice);
+      expect(bobReceived.messageText).toBe(MessageTextSchema.parse("hi bob"));
+      expect(bobReceived.messageId).toBe(mid1);
+
+      // 5) Bob -> Alice（レース回避：先に待つ）
+      const pCreatedOnAlice = waitForWsMessage(
+        wsAlice,
+        (m) => m.type === "message.created",
+      );
+
+      wsBob.send(
+        JSON.stringify({
+          type: "message.send",
+          payload: {
+            conversationId: cid,
+            clientMessageId: cmidBob,
+            messageText: "hi alice",
+          },
+        }),
+      );
+
+      const createdOnAlice = await pCreatedOnAlice;
+      const aliceReceived = MessageCreatedPayloadSchema.parse(
+        createdOnAlice.payload,
+      );
+
+      expect(aliceReceived.conversationId).toBe(cid);
+      expect(aliceReceived.senderId).toBe(uidBob);
+      expect(aliceReceived.clientMessageId).toBe(cmidBob);
+      expect(aliceReceived.messageText).toBe(
+        MessageTextSchema.parse("hi alice"),
+      );
+      expect(aliceReceived.messageId).toBe(mid2);
+
+      // 6) 永続化（DB）も確認：2件あること
+      const listed = await queryRepo.listByConversation({
+        conversationId: cid,
+        afterMessageId: undefined,
+        limit: 50,
+      });
+
+      expect(listed.map((m) => m.messageId)).toEqual([mid1, mid2]);
+      expect(listed.map((m) => m.senderId)).toEqual([uidAlice, uidBob]);
+    } finally {
+      wsAlice.close();
+      wsBob.close();
+    }
   });
 });

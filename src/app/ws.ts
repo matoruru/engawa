@@ -1,6 +1,5 @@
 import { Elysia, t } from "elysia";
 import { extractBearer, verifySessionJwt } from "@/shared/auth/sessionJwt";
-import { env } from "@/shared/env";
 import type { UserId } from "@/shared/ids";
 import type { AppServices } from "./compose";
 import { WsClientEventSchema, wsEncode } from "./wsTypes";
