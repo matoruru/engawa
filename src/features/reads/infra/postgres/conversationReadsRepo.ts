@@ -28,25 +28,28 @@ export const makePostgresConversationReadsRepo = (
   },
 
   upsert: async (cursor: ReadCursor): Promise<void> => {
-    // UUIDv7 の順序性を前提に、より新しい last_read のみ反映したい場合は WHERE を付ける
-    // 付けない場合は常に上書き（単純）。ここでは “後戻り防止” を入れておく。
     await db`
-      INSERT INTO conversation_reads (
-        conversation_id,
-        user_id,
-        last_read_message_id,
-        updated_at
-      ) VALUES (
-        ${cursor.conversationId},
-        ${cursor.userId},
-        ${cursor.lastReadMessageId},
-        ${cursor.updatedAt}
+    INSERT INTO conversation_reads (
+      conversation_id,
+      user_id,
+      last_read_message_id,
+      updated_at
+    ) VALUES (
+      ${cursor.conversationId},
+      ${cursor.userId},
+      ${cursor.lastReadMessageId},
+      ${cursor.updatedAt}
+    )
+    ON CONFLICT (conversation_id, user_id)
+    DO UPDATE SET
+      last_read_message_id = EXCLUDED.last_read_message_id,
+      updated_at = EXCLUDED.updated_at
+    WHERE
+      conversation_reads.last_read_message_id IS NULL
+      OR (
+        EXCLUDED.last_read_message_id IS NOT NULL
+        AND conversation_reads.last_read_message_id < EXCLUDED.last_read_message_id
       )
-      ON CONFLICT (conversation_id, user_id)
-      DO UPDATE SET
-        last_read_message_id = EXCLUDED.last_read_message_id,
-        updated_at = EXCLUDED.updated_at
-      WHERE conversation_reads.last_read_message_id < EXCLUDED.last_read_message_id
-    `;
+  `;
   },
 });

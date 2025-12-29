@@ -13,7 +13,11 @@ const CreateSessionBodySchema = z.object({
 export const sessionRoutes = new Elysia()
   .post(
     "/session",
-    async ({ body, cookie }) => {
+    async ({ body, cookie, status }) => {
+      if (env.NODE_ENV === "production" || env.NODE_ENV === undefined) {
+        return status(404, { error: "Not found" });
+      }
+
       const { userId } = CreateSessionBodySchema.parse(body) as {
         userId: UserId;
       };
@@ -25,7 +29,7 @@ export const sessionRoutes = new Elysia()
         value: token,
         httpOnly: true,
         sameSite: "lax",
-        secure: env.NODE_ENV === "production",
+        secure: false,
         path: "/",
         // 30日（秒）
         maxAge: 60 * 60 * 24 * 30,
@@ -41,7 +45,11 @@ export const sessionRoutes = new Elysia()
   )
   .delete(
     "/session",
-    ({ cookie }) => {
+    ({ cookie, status }) => {
+      if (env.NODE_ENV === "production" || env.NODE_ENV === undefined) {
+        return status(404, { error: "Not found" });
+      }
+
       cookie.session.remove();
       return { ok: true };
     },

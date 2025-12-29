@@ -1,8 +1,10 @@
 import { env } from "@/shared/env";
+import { MessageIdSchema } from "@/shared/ids";
 import {
   createPostgresClient,
   type PostgresClient,
 } from "@/shared/infra/postgres/postgresClient";
+import { uuidv7 } from "@/shared/uuid";
 import { makePostgresConversationMembersRepo } from "../features/conversations/infra/postgres/conversationMembersRepo";
 import { makePostgresMessageQueryRepo } from "../features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresMessageRepo } from "../features/messages/infra/postgres/messageRepo";
@@ -51,9 +53,7 @@ export const composeApp = (): AppServices => {
     membersRepo,
     now: () => new Date(),
     generateMessageId: () => {
-      // TODO: uuidv7 generator を入れる。いまは一旦例外にしておく
-      throw new Error("TODO: generateMessageId (uuidv7)");
-      // 例: return MessageIdSchema.parse(uuidv7());
+      return MessageIdSchema.parse(uuidv7());
     },
   });
 

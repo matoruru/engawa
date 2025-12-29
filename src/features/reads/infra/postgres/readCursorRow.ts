@@ -16,7 +16,7 @@ const UpdatedAtSchema = z.preprocess((v) => {
 export const ReadCursorRowSchema = z.object({
   conversation_id: ConversationIdSchema,
   user_id: UserIdSchema,
-  last_read_message_id: MessageIdSchema,
+  last_read_message_id: MessageIdSchema.nullable(),
   updated_at: UpdatedAtSchema,
 });
 export type ReadCursorRow = z.infer<typeof ReadCursorRowSchema>;

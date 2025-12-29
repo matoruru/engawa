@@ -28,8 +28,11 @@ export type UpdateReadCursorResult =
   | { kind: "forbidden"; reason: "NOT_A_MEMBER" };
 
 // UUIDv7 の文字列比較で単調増加を判定（MVP）
-const isNewerThan = (a: MessageId, b: MessageId): boolean => a > b;
-
+const isNewerThan = (a: MessageId, b: MessageId | null): boolean => {
+  // current が NULL（例: 参照先 message が消えた場合）なら常に更新OK
+  if (b === null) return true;
+  return a > b;
+};
 export const makeUpdateReadCursor =
   (deps: UpdateReadCursorDeps) =>
   async (input: UpdateReadCursorInput): Promise<UpdateReadCursorResult> => {
