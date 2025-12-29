@@ -8,7 +8,8 @@ import {
 } from "bun:test";
 import { Elysia } from "elysia";
 import WebSocket from "ws";
-import * as z from "zod";
+import type * as z from "zod";
+
 import {
   ClientMessageIdSchema,
   ConversationIdSchema,
@@ -20,6 +21,12 @@ import { createPostgresClient } from "@/shared/infra/postgres/postgresClient";
 
 import { sessionRoutes } from "../../../src/app/sessionRoutes";
 import { makeWsApp } from "../../../src/app/ws";
+import {
+  WsMessagePayloadSchema,
+  type WsServerEvent,
+  WsServerEventSchema,
+  WsSyncMessagesResultSchema,
+} from "../../../src/app/wsTypes";
 
 import { makePostgresConversationMembersRepo } from "../../../src/features/conversations/infra/postgres/conversationMembersRepo";
 import { MessageTextSchema } from "../../../src/features/messages/domain";
@@ -48,29 +55,12 @@ const extractSessionCookie = (setCookie: string): string => {
   return `session=${m[1]}`;
 };
 
-// ---- Zod schemas for WS messages (test-side) ----
-const WsEnvelopeSchema = z.object({
-  type: z.string(),
-  payload: z.unknown().optional(),
-});
-type WsEnvelope = z.infer<typeof WsEnvelopeSchema>;
-
-const MessageCreatedPayloadSchema = z.object({
-  messageId: MessageIdSchema,
-  conversationId: ConversationIdSchema,
-  senderId: UserIdSchema,
-  clientMessageId: ClientMessageIdSchema,
-  messageText: MessageTextSchema,
-  // wsEncode が Date をどうするかは実装次第なので、ここは string|Date を許容
-  createdAt: z.union([z.string(), z.date()]),
-});
-
 const waitForWsMessage = async (
   ws: WebSocket,
-  pred: (m: WsEnvelope) => boolean,
+  pred: (m: WsServerEvent) => boolean,
   timeoutMs = 3000,
-): Promise<WsEnvelope> => {
-  return await new Promise<WsEnvelope>((resolve, reject) => {
+): Promise<WsServerEvent> => {
+  return await new Promise<WsServerEvent>((resolve, reject) => {
     const timer = setTimeout(() => {
       cleanup();
       reject(new Error("timeout waiting for ws message"));
@@ -78,8 +68,17 @@ const waitForWsMessage = async (
 
     const onMessage = (data: WebSocket.RawData) => {
       const text = typeof data === "string" ? data : data.toString();
-      const parsed = WsEnvelopeSchema.safeParse(JSON.parse(text));
+
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        return;
+      }
+
+      const parsed = WsServerEventSchema.safeParse(json);
       if (!parsed.success) return;
+
       if (pred(parsed.data)) {
         cleanup();
         resolve(parsed.data);
@@ -109,18 +108,43 @@ const waitForWsMessage = async (
   });
 };
 
+const waitForSyncedOk = async (
+  ws: WebSocket,
+  timeoutMs = 3000,
+): Promise<
+  Extract<z.infer<typeof WsSyncMessagesResultSchema>, { kind: "ok" }>
+> => {
+  const env = await waitForWsMessage(
+    ws,
+    (m) => m.type === "messages.synced",
+    timeoutMs,
+  );
+  const payload = WsSyncMessagesResultSchema.parse(env.payload);
+
+  if (payload.kind !== "ok") {
+    throw new Error(`messages.synced was not ok: ${JSON.stringify(payload)}`);
+  }
+  return payload;
+};
+
+// WSの終了を待ってテストを確実に終了させるためのユーティリティ
+const closeWs = async (ws: WebSocket): Promise<void> => {
+  await new Promise<void>((resolve) => {
+    ws.once("close", () => resolve());
+    ws.close();
+  });
+};
+
 // listen(0) の戻り値から port を読むための最小ユーティリティ
 const getListeningPort = (app: Elysia): number => {
   const server = app.server;
   if (!server) throw new Error("Elysia server is not running");
 
-  // Bun の Server は port を持つ（型が合わないケースがあるためここだけ “in” で安全に読む）
   if ("port" in server) {
     const p = (server as { port: unknown }).port;
     if (typeof p === "number") return p;
   }
 
-  // どうしても取れないなら固定ポート運用に切り替える
   throw new Error("Cannot determine listening port from Elysia server");
 };
 
@@ -136,11 +160,9 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e10",
   );
 
-  // users（2人）
   const uidAlice = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e11");
   const uidBob = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e12");
 
-  // client message ids（送信者ごとに別）
   const cmidAlice = ClientMessageIdSchema.parse(
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e13",
   );
@@ -161,11 +183,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e23",
   );
 
-  let app: Elysia;
-  let baseUrl: string;
-  let wsUrl: string;
-  let queryRepo: ReturnType<typeof makePostgresMessageQueryRepo>;
-
+  // ---- 安定化：messageId generator をテストごとにリセットする ----
   const idQueue: readonly MessageId[] = [mid1, mid2, mid3, mid4];
   let idIndex = 0;
 
@@ -176,10 +194,41 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     return v;
   };
 
+  let app: Elysia;
+  let baseUrl: string;
+  let wsUrl: string;
+  let queryRepo: ReturnType<typeof makePostgresMessageQueryRepo>;
+
+  const createSessionCookie = async (userId: string): Promise<string> => {
+    const res = await fetch(`${baseUrl}/session`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+
+    expect(res.status).toBe(200);
+
+    const setCookie = res.headers.get("set-cookie");
+    if (!setCookie) throw new Error("missing set-cookie");
+
+    return extractSessionCookie(setCookie);
+  };
+
+  const connectWs = async (cookieHeader: string): Promise<WebSocket> => {
+    const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieHeader } });
+
+    await new Promise<void>((resolve, reject) => {
+      ws.once("open", () => resolve());
+      ws.once("error", (e) => reject(e));
+    });
+
+    await waitForWsMessage(ws, (m) => m.type === "server.hello");
+    return ws;
+  };
+
   beforeAll(async () => {
     await db`SELECT 1 as ok`;
 
-    // テスト用 services（composeApp の TODO を避ける）
     const membersRepo = makePostgresConversationMembersRepo(db);
     const messageRepo = makePostgresMessageRepo(db);
     const readsRepo = makePostgresConversationReadsRepo(db);
@@ -214,15 +263,23 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
   });
 
   beforeEach(async () => {
-    idIndex = 0;
+    idIndex = 0; // テストごとに messageId 生成をリセット
+
     await resetDb(db);
+
     await seedUser(db, {
       id: uidAlice,
       username: "alice",
       displayName: "Alice",
     });
-    await seedUser(db, { id: uidBob, username: "bob", displayName: "Bob" });
+    await seedUser(db, {
+      id: uidBob,
+      username: "bob",
+      displayName: "Bob",
+    });
+
     await seedConversation(db, { id: cid });
+
     await seedMember(db, { conversationId: cid, userId: uidAlice });
     await seedMember(db, { conversationId: cid, userId: uidBob });
   });
@@ -233,152 +290,101 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
   });
 
   it("POST /session -> WS connect with Cookie -> message.send -> receives message.created", async () => {
-    // 1) Cookie 発行
-    const res = await fetch(`${baseUrl}/session`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userId: uidAlice }),
-    });
-
-    expect(res.status).toBe(200);
-
-    const setCookie = res.headers.get("set-cookie");
-    if (!setCookie) throw new Error("missing set-cookie");
-
-    const cookieHeader = extractSessionCookie(setCookie);
+    // 1) Cookie 発行（Alice）
+    const cookieHeader = await createSessionCookie(uidAlice);
 
     // 2) WS接続
-    const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieHeader } });
+    const ws = await connectWs(cookieHeader);
 
-    await new Promise<void>((resolve, reject) => {
-      ws.once("open", () => resolve());
-      ws.once("error", (e) => reject(e));
-    });
+    try {
+      // 3) message.send を送る（先に待つとレースが消える）
+      const pCreated = waitForWsMessage(
+        ws,
+        (m) => m.type === "message.created",
+      );
 
-    // 3) server.hello を待つ
-    await waitForWsMessage(ws, (m) => m.type === "server.hello");
+      ws.send(
+        JSON.stringify({
+          type: "message.send",
+          payload: {
+            conversationId: cid,
+            clientMessageId: cmidAlice,
+            messageText: "hello",
+          },
+        }),
+      );
 
-    // 4) message.send を送る（payload は JSON）
-    ws.send(
-      JSON.stringify({
-        type: "message.send",
-        payload: {
-          conversationId: cid,
-          clientMessageId: cmidAlice,
-          messageText: "hello",
-        },
-      }),
-    );
+      const created = await pCreated;
+      const payload = WsMessagePayloadSchema.parse(created.payload);
 
-    // 5) message.created を受信して Zod で検証
-    const created = await waitForWsMessage(
-      ws,
-      (m) => m.type === "message.created",
-    );
-    const payload = MessageCreatedPayloadSchema.parse(created.payload);
-
-    expect(payload.conversationId).toBe(cid);
-    expect(payload.senderId).toBe(uidAlice);
-    expect(payload.clientMessageId).toBe(cmidAlice);
-    expect(payload.messageText).toBe(MessageTextSchema.parse("hello"));
-    expect(payload.messageId).toBe(mid1);
-
-    ws.close();
+      expect(payload.conversationId).toBe(cid);
+      expect(payload.senderId).toBe(uidAlice);
+      expect(payload.clientMessageId).toBe(cmidAlice);
+      expect(payload.messageText).toBe(MessageTextSchema.parse("hello"));
+      expect(payload.messageId).toBe(mid1);
+    } finally {
+      ws.close();
+    }
   });
 
   it("deduplicates by clientMessageId: resending does not create a second row", async () => {
-    // 1) Cookie 発行
-    const res = await fetch(`${baseUrl}/session`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userId: uidAlice }),
-    });
-    expect(res.status).toBe(200);
+    const cookieHeader = await createSessionCookie(uidAlice);
+    const ws = await connectWs(cookieHeader);
 
-    const setCookie = res.headers.get("set-cookie");
-    if (!setCookie) throw new Error("missing set-cookie");
-    const cookieHeader = extractSessionCookie(setCookie);
+    try {
+      // 1回目
+      const p1 = waitForWsMessage(ws, (m) => m.type === "message.created");
+      ws.send(
+        JSON.stringify({
+          type: "message.send",
+          payload: {
+            conversationId: cid,
+            clientMessageId: cmidAlice,
+            messageText: "hello",
+          },
+        }),
+      );
+      const created1 = await p1;
+      const payload1 = WsMessagePayloadSchema.parse(created1.payload);
+      const firstId = payload1.messageId;
 
-    // 2) WS接続
-    const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieHeader } });
+      // 2回目（再送）
+      const pDupCreated = waitForWsMessage(
+        ws,
+        (m) => m.type === "message.created",
+      );
+      ws.send(
+        JSON.stringify({
+          type: "message.send",
+          payload: {
+            conversationId: cid,
+            clientMessageId: cmidAlice,
+            messageText: "hello",
+          },
+        }),
+      );
 
-    await new Promise<void>((resolve, reject) => {
-      ws.once("open", () => resolve());
-      ws.once("error", (e) => reject(e));
-    });
+      // duplicate の broadcast を受け取ってサーバ処理完了を確定させる
+      const created2 = await pDupCreated;
+      const payload2 = WsMessagePayloadSchema.parse(created2.payload);
+      expect(payload2.messageId).toBe(firstId);
 
-    await waitForWsMessage(ws, (m) => m.type === "server.hello");
+      // DB確認
+      const listed = await queryRepo.listByConversation({
+        conversationId: cid,
+        afterMessageId: undefined,
+        limit: 50,
+      });
 
-    // 3) 1回目: message.created を待つ
-    const p1 = waitForWsMessage(ws, (m) => m.type === "message.created");
-    ws.send(
-      JSON.stringify({
-        type: "message.send",
-        payload: {
-          conversationId: cid,
-          clientMessageId: cmidAlice,
-          messageText: "hello",
-        },
-      }),
-    );
-    const created1 = await p1;
-    const payload1 = MessageCreatedPayloadSchema.parse(created1.payload);
-    const firstId = payload1.messageId;
-
-    // 4) 2回目: 再送（ここでは message.created が来る/来ないの両方を許容）
-    ws.send(
-      JSON.stringify({
-        type: "message.send",
-        payload: {
-          conversationId: cid,
-          clientMessageId: cmidAlice,
-          messageText: "hello",
-        },
-      }),
-    );
-
-    // 5) “二重登録されてない” を QueryRepo で検証
-    // ※このテストファイルで beforeAll で作っている queryRepo を使う形が一番ラク
-    const listed = await queryRepo.listByConversation({
-      conversationId: cid,
-      afterMessageId: undefined,
-      limit: 50,
-    });
-
-    expect(listed.length).toBe(1);
-    expect(listed[0]?.messageId).toBe(firstId);
-    expect(listed[0]?.clientMessageId).toBe(cmidAlice);
-
-    ws.close();
+      expect(listed.length).toBe(1);
+      expect(listed[0]?.messageId).toBe(firstId);
+      expect(listed[0]?.clientMessageId).toBe(cmidAlice);
+    } finally {
+      await closeWs(ws); // WSの終了を待ってテストを確実に終了させる
+    }
   });
 
   it("two users: subscribe via messages.sync, exchange messages, and both receive message.created", async () => {
-    const createSessionCookie = async (userId: string): Promise<string> => {
-      const res = await fetch(`${baseUrl}/session`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      expect(res.status).toBe(200);
-
-      const setCookie = res.headers.get("set-cookie");
-      if (!setCookie) throw new Error("missing set-cookie");
-
-      return extractSessionCookie(setCookie);
-    };
-
-    const connectWs = async (cookieHeader: string): Promise<WebSocket> => {
-      const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieHeader } });
-
-      await new Promise<void>((resolve, reject) => {
-        ws.once("open", () => resolve());
-        ws.once("error", (e) => reject(e));
-      });
-
-      await waitForWsMessage(ws, (m) => m.type === "server.hello");
-      return ws;
-    };
-
     // 1) セッション cookie 発行
     const [cookieAlice, cookieBob] = await Promise.all([
       createSessionCookie(uidAlice),
@@ -392,11 +398,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     ]);
 
     try {
-      // 3) 両者が購読開始（messages.sync → join）
-      const pSyncedAlice = waitForWsMessage(
-        wsAlice,
-        (m) => m.type === "messages.synced",
-      );
+      // 3) 両者 messages.sync（join を確実にする）
       wsAlice.send(
         JSON.stringify({
           type: "messages.sync",
@@ -407,11 +409,9 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
           },
         }),
       );
+      const syncedAlice = await waitForSyncedOk(wsAlice);
+      expect(syncedAlice.messages).toEqual([]);
 
-      const pSyncedBob = waitForWsMessage(
-        wsBob,
-        (m) => m.type === "messages.synced",
-      );
       wsBob.send(
         JSON.stringify({
           type: "messages.sync",
@@ -422,12 +422,8 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
           },
         }),
       );
-
-      const syncedAlice = await pSyncedAlice;
-      const syncedBob = await pSyncedBob;
-
-      expect((syncedAlice.payload as { kind?: string })?.kind).toBe("ok");
-      expect((syncedBob.payload as { kind?: string })?.kind).toBe("ok");
+      const syncedBob = await waitForSyncedOk(wsBob);
+      expect(syncedBob.messages).toEqual([]);
 
       // 4) Alice -> Bob（レース回避：先に待つ）
       const pCreatedOnBob = waitForWsMessage(
@@ -447,9 +443,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       );
 
       const createdOnBob = await pCreatedOnBob;
-      const bobReceived = MessageCreatedPayloadSchema.parse(
-        createdOnBob.payload,
-      );
+      const bobReceived = WsMessagePayloadSchema.parse(createdOnBob.payload);
 
       expect(bobReceived.conversationId).toBe(cid);
       expect(bobReceived.senderId).toBe(uidAlice);
@@ -475,7 +469,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       );
 
       const createdOnAlice = await pCreatedOnAlice;
-      const aliceReceived = MessageCreatedPayloadSchema.parse(
+      const aliceReceived = WsMessagePayloadSchema.parse(
         createdOnAlice.payload,
       );
 
@@ -487,7 +481,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       );
       expect(aliceReceived.messageId).toBe(mid2);
 
-      // 6) 永続化（DB）も確認：2件あること
+      // 6) DB 永続化も確認（順序も含めて固定化）、2件のメッセージがあることを確認
       const listed = await queryRepo.listByConversation({
         conversationId: cid,
         afterMessageId: undefined,
@@ -496,9 +490,12 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
 
       expect(listed.map((m) => m.messageId)).toEqual([mid1, mid2]);
       expect(listed.map((m) => m.senderId)).toEqual([uidAlice, uidBob]);
+      expect(listed.map((m) => m.messageText)).toEqual([
+        MessageTextSchema.parse("hi bob"),
+        MessageTextSchema.parse("hi alice"),
+      ]);
     } finally {
-      wsAlice.close();
-      wsBob.close();
+      await Promise.all([closeWs(wsAlice), closeWs(wsBob)]);
     }
   });
 });
