@@ -249,7 +249,10 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       now: () => new Date("2025-12-27T00:00:02.000Z"),
     });
 
-    const svc = { db, sendMessage, syncMessages, updateReadCursor };
+    // NOTE: テストではBetterAuth を使わないので noop
+    const resolveAppUserIdFromBetterAuthUserId = async (_authUserId: string) => { /** noop */ return null; };
+
+    const svc = { db, resolveAppUserIdFromBetterAuthUserId, sendMessage, syncMessages, updateReadCursor };
 
     // @ts-expect-error Elysiaの型が複雑なので無視する
     app = new Elysia()
