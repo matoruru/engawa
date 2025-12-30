@@ -4,7 +4,7 @@ import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
-import { InviteUserDialog } from "./InviteUserDialog";
+import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
 import { Send, ArrowLeft, UserPlus } from "lucide-react";
@@ -350,15 +350,15 @@ export function Chat({
         )}
       </div>
 
-      {/* 招待ダイアログ */}
+      {/* 友達追加ダイアログ */}
       {showInviteDialog && (
-        <InviteUserDialog
+        <AddFriendToConversationDialog
           conversationId={conversationId}
           apiUrl={apiUrl}
           currentUserId={currentUserId}
           onClose={() => setShowInviteDialog(false)}
           onInviteSuccess={() => {
-            // 招待成功時の処理（必要に応じて）
+            // 追加成功時の処理（必要に応じて）
           }}
         />
       )}
