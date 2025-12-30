@@ -3,10 +3,9 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Search, UserPlus, UserMinus, Users, Link2, Copy, Check } from "lucide-react";
+import { UserMinus, Users, Link2, Copy, Check } from "lucide-react";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
-import { cn } from "@/lib/utils";
 
 interface Friend {
   id: string;
@@ -21,10 +20,7 @@ interface FriendsListProps {
 
 export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
@@ -59,37 +55,6 @@ export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
     loadFriends();
   }, []);
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (!query || query.trim().length === 0) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      setIsSearching(true);
-      const response = await app.users.search.get({
-        query: { q: query },
-      });
-      if (response.data && "users" in response.data) {
-        const users = response.data.users as Array<{
-          id: string;
-          username: string;
-          displayName: string;
-        }>;
-        // 既に友達のユーザーを除外
-        const friendIds = new Set(friends.map((f) => f.id));
-        const filtered = users.filter(
-          (u) => u.id !== currentUserId && !friendIds.has(u.id)
-        );
-        setSearchResults(filtered);
-      }
-    } catch (error) {
-      console.error("Failed to search users:", error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   const handleCreateInvite = async () => {
     try {
@@ -118,11 +83,15 @@ export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
   const handleRemoveFriend = async (friendId: string) => {
     try {
       setIsAdding(friendId);
-      const response = await app.friends[":friendId"].delete({
-        params: { friendId },
+      const response = await fetch(`${apiUrl}/friends/${friendId}`, {
+        method: "DELETE",
+        credentials: "include",
       });
-      if (response.data && "success" in response.data && response.data.success) {
-        await loadFriends();
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          await loadFriends();
+        }
       }
     } catch (error) {
       console.error("Failed to remove friend:", error);
@@ -154,39 +123,30 @@ export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
           {isCreatingInvite ? "生成中..." : "招待リンクを生成"}
         </Button>
         {inviteUrl && (
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted p-3">
-            <Input
-              value={inviteUrl}
-              readOnly
-              className="flex-1 text-sm"
-            />
-            <Button
-              onClick={handleCopyInviteUrl}
-              size="icon"
-              variant="ghost"
-            >
-              {copied ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </Button>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground text-center">
+              このリンクを招待したい友達に共有してください
+            </p>
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted p-3">
+              <Input
+                value={inviteUrl}
+                readOnly
+                className="flex-1 text-sm"
+              />
+              <Button
+                onClick={handleCopyInviteUrl}
+                size="icon"
+                variant="ghost"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
         )}
-      </div>
-
-      {/* 検索バー */}
-      <div className="border-b border-border bg-card p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="ユーザーを検索..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
       </div>
 
       {/* コンテンツ */}
@@ -212,7 +172,7 @@ export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
                   友達がいません
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  検索して友達を追加しましょう
+                  招待リンクから友達を追加しましょう
                 </p>
               </div>
             ) : (
