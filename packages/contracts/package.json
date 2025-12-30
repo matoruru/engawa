@@ -1,0 +1,16 @@
+{
+  "name": "@kaiwa/contracts",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./exports.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@kaiwa/api": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

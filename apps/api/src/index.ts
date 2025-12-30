@@ -10,12 +10,11 @@ import { env } from "./shared/env";
 const services = composeApp();
 const handlers = makeHttpHandlers(services);
 
-const app = new Elysia();
+const app = new Elysia()
 
-// BetterAuth endpoints
-app.mount(auth.handler);
+  // BetterAuth endpoints
+  .mount(auth.handler)
 
-app
   .use(makeBetterAuthPlugin(services.db))
   .use(makeWsApp(services))
   .get("/healthz", () => ({ ok: true }))
