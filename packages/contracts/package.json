@@ -4,11 +4,13 @@
   "version": "1.0.0",
   "type": "module",
   "exports": {
-    ".": "./exports.ts"
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "@kaiwa/api": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@kaiwa/api": "workspace:*"
+    "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"

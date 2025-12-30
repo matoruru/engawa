@@ -2,9 +2,14 @@ import { useState } from "react";
 import viteLogo from "/vite.svg";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
+import { treaty } from "@elysiajs/eden";
+import type { App as AppContract } from "@kaiwa/contracts";
 
 function App() {
   const [count, setCount] = useState(0);
+
+  const app = treaty<AppContract>("localhost:3000");
+  app.healthz.get();
 
   return (
     <>

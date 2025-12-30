@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { auth } from "./app/auth";
 import { makeBetterAuthPlugin } from "./app/betterAuthPlugin";
 import { composeApp } from "./app/compose";
@@ -6,6 +6,7 @@ import { makeHttpHandlers } from "./app/httpHandlers";
 import { sessionRoutes } from "./app/sessionRoutes";
 import { makeWsApp } from "./app/ws";
 import { env } from "./shared/env";
+import cors from "@elysiajs/cors";
 
 const services = composeApp();
 const handlers = makeHttpHandlers(services);
@@ -35,8 +36,16 @@ const app = new Elysia()
   )
   .listen(env.PORT);
 
-const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
-if (!isProd) app.use(sessionRoutes);
+  const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
+  if (!isProd) {
+    app.use(sessionRoutes);
+  }
+
+  app.use(cors({
+    origin: env.ALLOWED_ORIGINS.split(","),
+  }));
+
 
 console.log(`Listening on http://localhost:${env.PORT}`);
+
 export type App = typeof app;

@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "kaiwa",
+      "dependencies": {
+        "elysia": "^1.4.19",
+      },
       "devDependencies": {
         "@biomejs/biome": "2.3.10",
       },
@@ -13,12 +16,12 @@
       "version": "0.0.0",
       "dependencies": {
         "better-auth": "^1.4.9",
-        "elysia": "^1.4.19",
         "jose": "^6.1.3",
         "pg": "^8.16.3",
         "zod": "^4.2.1",
       },
       "devDependencies": {
+        "@elysiajs/cors": "^1.4.1",
         "@types/pg": "^8.16.0",
         "@types/ws": "^8.18.1",
         "bun-types": "latest",
@@ -31,6 +34,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@elysiajs/eden": "^1.4.6",
+        "@kaiwa/contracts": "workspace:*",
         "@radix-ui/react-scroll-area": "^1.2.10",
         "@radix-ui/react-separator": "^1.1.8",
         "@radix-ui/react-slot": "^1.2.4",
@@ -57,8 +61,10 @@
     "packages/contracts": {
       "name": "@kaiwa/contracts",
       "version": "1.0.0",
-      "devDependencies": {
+      "dependencies": {
         "@kaiwa/api": "workspace:*",
+      },
+      "devDependencies": {
         "@types/bun": "latest",
       },
       "peerDependencies": {
@@ -146,6 +152,8 @@
     "@dbmate/linux-x64": ["@dbmate/linux-x64@2.28.0", "", { "os": "linux", "cpu": "x64" }, "sha512-S4pV5HstfN/uLtrMcouxhn0zcErUGco98LWfzjY4Ylcv2pnc6rfzS6bBO6q0dHFbSPPZWOlsTY6Dw7WU4Uqcaw=="],
 
     "@dbmate/win32-x64": ["@dbmate/win32-x64@2.28.0", "", { "os": "win32", "cpu": "x64" }, "sha512-AmP8/XkG8vXGhE0UcTxIujJcNSHuUpEGBG4hzKoAdvcWUKX6CYGyskiWfhBBe13O8xUBmii+kQ79uG75NUYlTw=="],
+
+    "@elysiajs/cors": ["@elysiajs/cors@1.4.1", "", { "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-lQfad+F3r4mNwsxRKbXyJB8Jg43oAOXjRwn7sKUL6bcOW3KjUqUimTS+woNpO97efpzjtDE0tEjGk9DTw8lqTQ=="],
 
     "@elysiajs/eden": ["@elysiajs/eden@1.4.6", "", { "peerDependencies": { "elysia": ">=1.4.19" } }, "sha512-Tsa4NwXEWg/u73vWiYZQ3L5/ecgZSxqiEjYwpS+4qBKXeTZqZKl2hcgHJSVBL+InEDMi35Xugct7qyAXE5oM4Q=="],
 

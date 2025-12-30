@@ -20,6 +20,8 @@ const EnvSchema = z.object({
     .optional()
     .transform((v) => (v === undefined ? 3000 : Number(v)))
     .pipe(z.number().int().min(1).max(65535)),
+
+  ALLOWED_ORIGINS: z.string().min(1).default("http://localhost:5173"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
