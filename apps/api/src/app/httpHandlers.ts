@@ -2,6 +2,7 @@ import * as z from "zod";
 import type { UserId } from "@/shared/ids";
 import { ConversationIdSchema, MessageIdSchema } from "@/shared/ids";
 import { MessageTextSchema } from "../features/messages/domain";
+import { uuidv7 } from "@/shared/uuid";
 
 import { SendMessageInputSchema } from "../features/messages/usecases/sendMessage";
 import { SyncMessagesInputSchema } from "../features/messages/usecases/syncMessages";
@@ -43,5 +44,29 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     const b = UpdateReadCursorHttpBodySchema.parse(body);
     const input = UpdateReadCursorInputSchema.parse({ ...b, userId });
     return svc.updateReadCursor(input);
+  },
+
+  listConversations: async (userId: UserId) => {
+    const membersRepo = svc.membersRepo;
+    const conversationIds = await membersRepo.listByUserId(userId);
+    return { conversations: conversationIds };
+  },
+
+  createConversation: async (userId: UserId) => {
+    const conversationId = ConversationIdSchema.parse(uuidv7());
+
+    // 会話を作成
+    await svc.db`
+      INSERT INTO conversations (id)
+      VALUES (${conversationId})
+    `;
+
+    // 作成者をメンバーとして追加
+    await svc.db`
+      INSERT INTO conversation_members (conversation_id, user_id)
+      VALUES (${conversationId}, ${userId})
+    `;
+
+    return { conversationId };
   },
 });

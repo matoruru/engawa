@@ -34,6 +34,16 @@ const app = new Elysia()
     ({ body, userId }) => handlers.updateReadCursor(userId, body),
     { auth: true },
   )
+  .get(
+    "/conversations",
+    ({ userId }) => handlers.listConversations(userId),
+    { auth: true },
+  )
+  .post(
+    "/conversations",
+    ({ userId }) => handlers.createConversation(userId),
+    { auth: true },
+  )
 
   const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
   if (!isProd) {

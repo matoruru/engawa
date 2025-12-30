@@ -30,6 +30,7 @@ const UserIdRowSchema = z.object({ user_id: z.string() });
 
 export type AppServices = {
   db: PostgresClient;
+  membersRepo: ReturnType<typeof makePostgresConversationMembersRepo>;
   resolveAppUserIdFromBetterAuthUserId: (
     authUserId: string,
   ) => Promise<UserId | null>;
@@ -91,6 +92,7 @@ export const composeApp = (): AppServices => {
 
   return {
     db,
+    membersRepo,
     resolveAppUserIdFromBetterAuthUserId: resolveAppUserIdFromAuthUserId,
     sendMessage,
     syncMessages,

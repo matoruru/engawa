@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
-import { Send } from "lucide-react";
+import { Send, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { v7 as uuidv7 } from "uuid";
 
@@ -36,6 +36,7 @@ interface ChatProps {
   currentUserId: string;
   apiUrl?: string;
   wsUrl?: string;
+  onBack?: () => void;
 }
 
 export function Chat({
@@ -43,6 +44,7 @@ export function Chat({
   currentUserId,
   apiUrl = "http://localhost:3000",
   wsUrl,
+  onBack,
 }: ChatProps) {
   const [messages, setMessages] = useState<WsMessage[]>([]);
   const [input, setInput] = useState("");
@@ -51,7 +53,15 @@ export function Chat({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const app = treaty<AppContract>(apiUrl);
+  const app = useMemo(
+    () =>
+      treaty<AppContract>(apiUrl, {
+        fetch: {
+          credentials: "include",
+        },
+      }),
+    [apiUrl]
+  );
   const ws = useWebSocket(
     wsUrl || apiUrl.replace(/^http/, "ws") + "/ws"
   );
@@ -90,7 +100,7 @@ export function Chat({
     if (ws.isConnected) {
       loadMessages();
     }
-  }, [conversationId, ws.isConnected]);
+  }, [conversationId, ws.isConnected, app]);
 
   // WebSocketイベントの処理
   useEffect(() => {
@@ -192,7 +202,19 @@ export function Chat({
     <div className="flex h-screen flex-col bg-background">
       {/* ヘッダー */}
       <div className="border-b border-border bg-card px-4 py-3">
-        <h1 className="text-lg font-semibold">チャット</h1>
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <Button
+              onClick={onBack}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <h1 className="text-lg font-semibold">チャット</h1>
+        </div>
       </div>
 
       {/* メッセージリスト */}
@@ -208,20 +230,23 @@ export function Chat({
             </div>
           ) : (
             messages.map((message) => {
+              console.log(`message: ${message.messageId} ${message.senderId} ${currentUserId}`)
               const isOwn = message.senderId === currentUserId;
               return (
                 <div
                   key={message.messageId}
                   className={cn(
                     "flex gap-3",
-                    isOwn ? "flex-row-reverse" : "flex-row"
+                    isOwn ? "justify-end" : "justify-start"
                   )}
                 >
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback className="text-xs">
-                      {getInitials(message.senderId)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {!isOwn && (
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarFallback className="text-xs">
+                        {getInitials(message.senderId)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div
                     className={cn(
                       "flex flex-col gap-1 max-w-[80%] sm:max-w-[70%]",
@@ -244,6 +269,13 @@ export function Chat({
                       {formatTime(message.createdAt)}
                     </span>
                   </div>
+                  {isOwn && (
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarFallback className="text-xs">
+                        {getInitials(message.senderId)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
               );
             })

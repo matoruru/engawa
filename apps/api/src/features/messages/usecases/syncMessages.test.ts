@@ -29,6 +29,16 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   ): Promise<boolean> {
     return this.members.has(`${conversationId}|${userId}`);
   }
+  async listByUserId(userId: UserId): Promise<readonly ConversationId[]> {
+    const conversationIds = new Set<ConversationId>();
+    for (const member of this.members) {
+      const [convId, uid] = member.split("|");
+      if (uid === userId) {
+        conversationIds.add(ConversationIdSchema.parse(convId));
+      }
+    }
+    return Array.from(conversationIds);
+  }
 }
 
 class InMemoryMessageQueryRepo implements MessageQueryRepository {

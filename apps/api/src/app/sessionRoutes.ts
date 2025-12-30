@@ -19,6 +19,7 @@ export const sessionRoutes = new Elysia()
       }
 
       const result = CreateSessionBodySchema.safeParse(body);
+      console.log("result", result);
       if (!result.success) {
         return status(400, { error: "Invalid request body" });
       }

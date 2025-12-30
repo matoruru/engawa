@@ -31,6 +31,7 @@ export type SyncMessagesResult =
 export const makeSyncMessages =
   (deps: SyncMessagesDeps) =>
   async (input: SyncMessagesInput): Promise<SyncMessagesResult> => {
+    console.log("syncMessages", input);
     const member = await deps.membersRepo.isMember(
       input.conversationId,
       input.userId,

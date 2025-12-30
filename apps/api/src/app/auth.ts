@@ -22,6 +22,14 @@ export const auth = betterAuth({
     },
   },
 
+  trustedOrigins: env.ALLOWED_ORIGINS.split(","),
+
+  // 開発環境でのみ有効
+  emailAndPassword: {
+    enabled: env.NODE_ENV === "development",
+    allowSignIn: true
+  },
+
   databaseHooks: {
     // 1) BetterAuth user が作られたら、アプリ側の users + user_identities を作る
     user: {
