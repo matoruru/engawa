@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.6",
+    "@kaiwa/contracts": "workspace:*",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.1.18",
+    "better-auth": "^1.4.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
@@ -21,8 +23,7 @@
     "react-dom": "^19.2.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
-    "uuid": "^11.0.3",
-    "@kaiwa/contracts": "workspace:*"
+    "uuid": "^11.0.3"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",

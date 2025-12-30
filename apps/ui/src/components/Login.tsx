@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useAuth } from "../hooks/useAuth";
 import { isDevRuntime } from "../lib/utils";
+import { Chrome } from "lucide-react";
 
 interface LoginProps {
   apiUrl: string;

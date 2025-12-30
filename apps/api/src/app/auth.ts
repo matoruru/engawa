@@ -15,6 +15,8 @@ const makeInitialUsername = (authUserId: string, email: string): string => {
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   database: pool,
+  baseURL: env.BETTER_AUTH_URL,
+  basePath: "/api/auth",
 
   socialProviders: {
     google: {
