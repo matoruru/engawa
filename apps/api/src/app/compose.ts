@@ -1,12 +1,33 @@
 import z from "zod";
 import { env } from "@/shared/env";
-import { MessageIdSchema, type UserId, UserIdSchema } from "@/shared/ids";
+import { ConversationIdSchema, MessageIdSchema, type UserId, UserIdSchema } from "@/shared/ids";
 import {
   createPostgresClient,
   type PostgresClient,
 } from "@/shared/infra/postgres/postgresClient";
 import { uuidv7 } from "@/shared/uuid";
 import { makePostgresConversationMembersRepo } from "../features/conversations/infra/postgres/conversationMembersRepo";
+import { makePostgresConversationRepo } from "../features/conversations/infra/postgres/conversationRepo";
+import {
+  makeCreateConversation,
+  type CreateConversationInput,
+  type CreateConversationResult,
+} from "../features/conversations/usecases/createConversation";
+import {
+  makeListConversations,
+  type ListConversationsInput,
+  type ListConversationsResult,
+} from "../features/conversations/usecases/listConversations";
+import {
+  makeAddMemberToConversation,
+  type AddMemberToConversationInput,
+  type AddMemberToConversationResult,
+} from "../features/conversations/usecases/addMemberToConversation";
+import {
+  makeListConversationMembers,
+  type ListConversationMembersInput,
+  type ListConversationMembersResult,
+} from "../features/conversations/usecases/listConversationMembers";
 import { makePostgresMessageQueryRepo } from "../features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresMessageRepo } from "../features/messages/infra/postgres/messageRepo";
 import {
@@ -25,6 +46,7 @@ import {
   type UpdateReadCursorInput,
   type UpdateReadCursorResult,
 } from "../features/reads/usecases/updateReadCursor";
+import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
 
 const UserIdRowSchema = z.object({ user_id: z.string() });
 
@@ -39,6 +61,18 @@ export type AppServices = {
   updateReadCursor: (
     input: UpdateReadCursorInput,
   ) => Promise<UpdateReadCursorResult>;
+  createConversation: (
+    input: CreateConversationInput,
+  ) => Promise<CreateConversationResult>;
+  listConversations: (
+    input: ListConversationsInput,
+  ) => Promise<ListConversationsResult>;
+  addMemberToConversation: (
+    input: AddMemberToConversationInput,
+  ) => Promise<AddMemberToConversationResult>;
+  listConversationMembers: (
+    input: ListConversationMembersInput,
+  ) => Promise<ListConversationMembersResult>;
 };
 
 export const composeApp = (): AppServices => {
@@ -61,6 +95,10 @@ export const composeApp = (): AppServices => {
 
   // shared port
   const membersRepo = makePostgresConversationMembersRepo(db);
+  const userRepo = makePostgresUserRepo(db);
+
+  // conversations
+  const conversationRepo = makePostgresConversationRepo(db);
 
   // messages
   const messageRepo = makePostgresMessageRepo(db);
@@ -90,6 +128,29 @@ export const composeApp = (): AppServices => {
     now: () => new Date(),
   });
 
+  // conversations usecases
+  const createConversation = makeCreateConversation({
+    conversationRepo,
+    membersRepo,
+    generateConversationId: () => {
+      return ConversationIdSchema.parse(uuidv7());
+    },
+    now: () => new Date(),
+  });
+
+  const listConversations = makeListConversations({
+    membersRepo,
+  });
+
+  const addMemberToConversation = makeAddMemberToConversation({
+    membersRepo,
+  });
+
+  const listConversationMembers = makeListConversationMembers({
+    userRepo,
+    membersRepo,
+  });
+
   return {
     db,
     membersRepo,
@@ -97,5 +158,9 @@ export const composeApp = (): AppServices => {
     sendMessage,
     syncMessages,
     updateReadCursor,
+    createConversation,
+    listConversations,
+    addMemberToConversation,
+    listConversationMembers,
   };
 };

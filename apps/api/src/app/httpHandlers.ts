@@ -1,12 +1,15 @@
 import * as z from "zod";
-import type { UserId } from "@/shared/ids";
+import type { ConversationId, UserId } from "@/shared/ids";
 import { ConversationIdSchema, MessageIdSchema, UserIdSchema } from "@/shared/ids";
 import { MessageTextSchema } from "../features/messages/domain";
-import { uuidv7 } from "@/shared/uuid";
 
 import { SendMessageInputSchema } from "../features/messages/usecases/sendMessage";
 import { SyncMessagesInputSchema } from "../features/messages/usecases/syncMessages";
 import { UpdateReadCursorInputSchema } from "../features/reads/usecases/updateReadCursor";
+import { CreateConversationInputSchema } from "../features/conversations/usecases/createConversation";
+import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
+import { AddMemberToConversationInputSchema } from "../features/conversations/usecases/addMemberToConversation";
+import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
 import type { AppServices } from "./compose";
 
 // HTTPは senderId/userId を受け取らない。認証から userId を取得して使う。
@@ -47,27 +50,21 @@ export const makeHttpHandlers = (svc: AppServices) => ({
   },
 
   listConversations: async (userId: UserId) => {
-    const membersRepo = svc.membersRepo;
-    const conversationIds = await membersRepo.listByUserId(userId);
-    return { conversations: conversationIds };
+    const input = ListConversationsInputSchema.parse({ userId });
+    const result = await svc.listConversations(input);
+    if (result.kind === "ok") {
+      return { conversations: result.conversations };
+    }
+    throw new Error("Unexpected result from listConversations");
   },
 
   createConversation: async (userId: UserId) => {
-    const conversationId = ConversationIdSchema.parse(uuidv7());
-
-    // 会話を作成
-    await svc.db`
-      INSERT INTO conversations (id)
-      VALUES (${conversationId})
-    `;
-
-    // 作成者をメンバーとして追加
-    await svc.db`
-      INSERT INTO conversation_members (conversation_id, user_id)
-      VALUES (${conversationId}, ${userId})
-    `;
-
-    return { conversationId };
+    const input = CreateConversationInputSchema.parse({ userId });
+    const result = await svc.createConversation(input);
+    if (result.kind === "created") {
+      return { conversationId: result.conversationId };
+    }
+    throw new Error("Unexpected result from createConversation");
   },
 
   getCurrentUser: async (userId: UserId) => {
@@ -89,11 +86,19 @@ export const makeHttpHandlers = (svc: AppServices) => ({
       LIMIT 20
     `;
 
+    const UserRowSchema = z.object({
+      id: z.string(),
+      username: z.string(),
+      display_name: z.string().nullable(),
+    });
+
+    const parsed = z.array(UserRowSchema).parse(rows);
+
     return {
-      users: rows.map((row) => ({
+      users: parsed.map((row) => ({
         id: String(row.id),
         username: String(row.username),
-        displayName: String(row.display_name),
+        displayName: String(row.display_name || row.username),
       })),
     };
   },
@@ -103,54 +108,38 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     conversationId: ConversationId,
     targetUserId: UserId,
   ) => {
-    // 自分がメンバーかチェック
-    const isMember = await svc.membersRepo.isMember(conversationId, userId);
-    if (!isMember) {
-      return { success: false, error: "NOT_A_MEMBER" };
-    }
-
-    // 既にメンバーかチェック
-    const alreadyMember = await svc.membersRepo.isMember(
+    const input = AddMemberToConversationInputSchema.parse({
+      userId,
       conversationId,
       targetUserId,
-    );
-    if (alreadyMember) {
-      return { success: false, error: "ALREADY_MEMBER" };
+    });
+    const result = await svc.addMemberToConversation(input);
+    
+    if (result.kind === "added") {
+      return { success: true };
+    } else if (result.kind === "forbidden") {
+      return { success: false, error: result.reason };
+    } else if (result.kind === "conflict") {
+      return { success: false, error: result.reason };
     }
-
-    // メンバーを追加
-    await svc.membersRepo.addMember(conversationId, targetUserId);
-
-    return { success: true };
+    throw new Error("Unexpected result from addMemberToConversation");
   },
 
   listConversationMembers: async (
     userId: UserId,
     conversationId: ConversationId,
   ) => {
-    // 自分がメンバーかチェック
-    const isMember = await svc.membersRepo.isMember(conversationId, userId);
-    if (!isMember) {
-      return { success: false, error: "NOT_A_MEMBER" };
+    const input = ListConversationMembersInputSchema.parse({
+      userId,
+      conversationId,
+    });
+    const result = await svc.listConversationMembers(input);
+    
+    if (result.kind === "ok") {
+      return { success: true, members: result.members };
+    } else if (result.kind === "forbidden") {
+      return { success: false, error: result.reason };
     }
-
-    const memberIds = await svc.membersRepo.listByConversationId(conversationId);
-
-    // ユーザー情報を取得
-    const rows = await svc.db`
-      SELECT id, username, display_name
-      FROM users
-      WHERE id = ANY(${memberIds})
-      ORDER BY display_name ASC, username ASC
-    `;
-
-    return {
-      success: true,
-      members: rows.map((row) => ({
-        id: String(row.id),
-        username: String(row.username),
-        displayName: String(row.display_name),
-      })),
-    };
+    throw new Error("Unexpected result from listConversationMembers");
   },
 });
