@@ -19,14 +19,8 @@ const getAppUserIdByBetterAuthUserId = async (
 };
 
 export const makeBetterAuthPlugin = (db: PostgresClient) => {
-  const authApp = new Elysia({ name: "better-auth" })
-    .all("/*", async ({ request }) => {
-      // BetterAuthのハンドラーを直接呼び出し、Responseオブジェクトを返す
-      return auth.handler(request);
-    });
-
-  return new Elysia({ name: "better-auth-wrapper" })
-    .mount("/api/auth", authApp)
+  return new Elysia({ name: "better-auth" })
+    .mount(auth.handler)
     .macro({
       auth: {
         async resolve({ status, request: { headers } }) {

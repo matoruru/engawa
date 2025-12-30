@@ -14,11 +14,11 @@ const services = composeApp();
 const handlers = makeHttpHandlers(services);
 
 const app = new Elysia()
+  .use(makeBetterAuthPlugin(services.db))
   .use(cors({
     origin: env.ALLOWED_ORIGINS.split(","),
     credentials: true, // Allow cookies
   }))
-  .use(makeBetterAuthPlugin(services.db))
   .use(makeWsApp(services))
   .get("/healthz", () => ({ ok: true }))
   .post(
