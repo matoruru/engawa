@@ -1,39 +1,23 @@
 import { useState } from "react";
-import viteLogo from "/vite.svg";
-import reactLogo from "./assets/react.svg";
-import "./App.css";
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@kaiwa/contracts";
+import { Chat } from "./components/Chat";
+
+// 開発用: 実際のアプリでは認証から取得
+const DEFAULT_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000";
+const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 function App() {
-  const [count, setCount] = useState(0);
-
-  const app = treaty<AppContract>("localhost:3000");
-  app.healthz.get();
+  const [conversationId] = useState(DEFAULT_CONVERSATION_ID);
+  const [currentUserId] = useState(DEFAULT_USER_ID);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank" rel="noopener">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noopener">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)} type="button">
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="h-screen w-screen overflow-hidden">
+      <Chat
+        conversationId={conversationId}
+        currentUserId={currentUserId}
+        apiUrl={import.meta.env.VITE_API_URL || "http://localhost:3000"}
+        wsUrl={import.meta.env.VITE_WS_URL}
+      />
+    </div>
   );
 }
 
