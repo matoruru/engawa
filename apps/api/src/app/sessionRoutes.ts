@@ -3,7 +3,7 @@ import * as z from "zod";
 
 import { issueSessionJwt } from "@/shared/auth/issueSessionJwt";
 import { type UserId, UserIdSchema } from "@/shared/ids";
-import { isProdRuntime } from "@/shared/runtime";
+import { isDevRuntime } from "@/shared/runtime";
 
 const CreateSessionBodySchema = z.object({
   // 開発用：任意の userId を入れてログインする
@@ -14,12 +14,11 @@ export const sessionRoutes = new Elysia()
   .post(
     "/session",
     async ({ body, cookie, status }) => {
-      if (isProdRuntime()) {
+      if (!isDevRuntime()) {
         return status(404, { error: "Not found" });
       }
 
       const result = CreateSessionBodySchema.safeParse(body);
-      console.log("result", result);
       if (!result.success) {
         return status(400, { error: "Invalid request body" });
       }
@@ -52,7 +51,7 @@ export const sessionRoutes = new Elysia()
   .delete(
     "/session",
     ({ cookie, status }) => {
-      if (isProdRuntime()) {
+      if (!isDevRuntime()) {
         return status(404, { error: "Not found" });
       }
 

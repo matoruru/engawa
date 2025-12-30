@@ -18,23 +18,32 @@ const getAppUserIdByBetterAuthUserId = async (
   return UserIdSchema.parse(rows[0]?.user_id);
 };
 
-export const makeBetterAuthPlugin = (db: PostgresClient) =>
-  new Elysia({ name: "better-auth" }).mount(auth.handler).macro({
-    auth: {
-      async resolve({ status, request: { headers } }) {
-        const session = await auth.api.getSession({ headers });
-        if (!session) return status(401);
+export const makeBetterAuthPlugin = (db: PostgresClient) => {
+  const authApp = new Elysia({ name: "better-auth" })
+    .all("/*", async ({ request }) => {
+      // BetterAuthのハンドラーを直接呼び出し、Responseオブジェクトを返す
+      return auth.handler(request);
+    });
 
-        const userId = await getAppUserIdByBetterAuthUserId(
-          db,
-          session.user.id,
-        );
+  return new Elysia({ name: "better-auth-wrapper" })
+    .mount("/api/auth", authApp)
+    .macro({
+      auth: {
+        async resolve({ status, request: { headers } }) {
+          const session = await auth.api.getSession({ headers });
+          if (!session) return status(401);
 
-        return {
-          user: session.user,
-          session: session.session,
-          userId, // アプリのユーザID
-        };
+          const userId = await getAppUserIdByBetterAuthUserId(
+            db,
+            session.user.id,
+          );
+
+          return {
+            user: session.user,
+            session: session.session,
+            userId, // アプリのユーザID
+          };
+        },
       },
-    },
-  });
+    });
+};

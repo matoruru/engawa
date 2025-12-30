@@ -4,7 +4,7 @@ import { extractBearer, verifySessionJwt } from "@/shared/auth/sessionJwt";
 import { env } from "@/shared/env";
 import type { UserId } from "@/shared/ids";
 import { UserIdSchema } from "@/shared/ids";
-import { isProdRuntime } from "@/shared/runtime";
+import { isDevRuntime } from "@/shared/runtime";
 import { auth } from "./auth";
 import type { AppServices } from "./compose";
 import { WsClientEventSchema, wsEncode } from "./wsTypes";
@@ -69,7 +69,7 @@ const resolveUserIdForWs = async (
   const headers = toHeaders(rawHeaders);
 
   // --- Dev/Test fallback（既存の wsChatFlow.test.ts を壊さないため） ---
-  if (!isProdRuntime()) {
+  if (isDevRuntime()) {
     const authz = headers.get("authorization") ?? undefined;
     const bearer = extractBearer(authz);
 

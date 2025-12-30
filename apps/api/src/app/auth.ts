@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 import { env } from "@/shared/env";
+import { isDevRuntime } from "@/shared/runtime";
 import { uuidv7 } from "@/shared/uuid";
 
 const pool = new Pool({ connectionString: env.POSTGRES_URL });
@@ -26,7 +27,7 @@ export const auth = betterAuth({
 
   // 開発環境でのみ有効
   emailAndPassword: {
-    enabled: env.NODE_ENV === "development",
+    enabled: isDevRuntime(),
     allowSignIn: true
   },
 

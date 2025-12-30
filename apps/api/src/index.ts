@@ -7,6 +7,7 @@ import { sessionRoutes } from "./app/sessionRoutes";
 import { makeWsApp } from "./app/ws";
 import { env } from "./shared/env";
 import { ConversationIdSchema, UserIdSchema } from "./shared/ids";
+import { isDevRuntime } from "./shared/runtime";
 import cors from "@elysiajs/cors";
 
 const services = composeApp();
@@ -93,8 +94,7 @@ const app = new Elysia()
     },
   )
 
-  const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
-  if (!isProd) {
+  if (isDevRuntime()) {
     app.use(sessionRoutes);
   }
 
