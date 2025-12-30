@@ -18,7 +18,12 @@ export const sessionRoutes = new Elysia()
         return status(404, { error: "Not found" });
       }
 
-      const { userId } = CreateSessionBodySchema.parse(body) as {
+      const result = CreateSessionBodySchema.safeParse(body);
+      if (!result.success) {
+        return status(400, { error: "Invalid request body" });
+      }
+
+      const { userId } = result.data as {
         userId: UserId;
       };
 

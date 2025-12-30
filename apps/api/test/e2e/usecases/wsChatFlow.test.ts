@@ -532,4 +532,13 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       }
     }
   });
+
+  it("POST /session returns 400 for invalid userId", async () => {
+    const res = await fetch(`${baseUrl}/session`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ userId: "invalid format" }),
+    });
+    expect(res.status).toBe(400);
+  });
 });
