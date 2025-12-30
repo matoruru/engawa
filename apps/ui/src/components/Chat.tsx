@@ -355,7 +355,6 @@ export function Chat({
         <AddFriendToConversationDialog
           conversationId={conversationId}
           apiUrl={apiUrl}
-          currentUserId={currentUserId}
           onClose={() => setShowInviteDialog(false)}
           onInviteSuccess={() => {
             // 追加成功時の処理（必要に応じて）

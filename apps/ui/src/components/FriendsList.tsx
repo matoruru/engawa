@@ -16,10 +16,9 @@ interface Friend {
 
 interface FriendsListProps {
   apiUrl: string;
-  currentUserId: string;
 }
 
-export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
+export function FriendsList({ apiUrl }: FriendsListProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState<string | null>(null);

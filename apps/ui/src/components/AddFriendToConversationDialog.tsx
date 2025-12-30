@@ -16,7 +16,6 @@ interface Friend {
 interface AddFriendToConversationDialogProps {
   conversationId: string;
   apiUrl: string;
-  currentUserId: string;
   onClose: () => void;
   onInviteSuccess: () => void;
 }
@@ -24,7 +23,6 @@ interface AddFriendToConversationDialogProps {
 export function AddFriendToConversationDialog({
   conversationId,
   apiUrl,
-  currentUserId,
   onClose,
   onInviteSuccess,
 }: AddFriendToConversationDialogProps) {
