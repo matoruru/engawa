@@ -16,14 +16,38 @@ import { makeSendMessage } from "./sendMessage";
 // --- Test doubles ---
 class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly members = new Set<string>();
-  addMember(conversationId: ConversationId, userId: UserId): void {
+  private readonly conversationsByUser = new Map<UserId, ConversationId[]>();
+  private readonly usersByConversation = new Map<ConversationId, UserId[]>();
+
+  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
+    
+    // Update conversationsByUser
+    const userConversations = this.conversationsByUser.get(userId) || [];
+    if (!userConversations.includes(conversationId)) {
+      this.conversationsByUser.set(userId, [...userConversations, conversationId]);
+    }
+    
+    // Update usersByConversation
+    const conversationUsers = this.usersByConversation.get(conversationId) || [];
+    if (!conversationUsers.includes(userId)) {
+      this.usersByConversation.set(conversationId, [...conversationUsers, userId]);
+    }
   }
+
   async isMember(
     conversationId: ConversationId,
     userId: UserId,
   ): Promise<boolean> {
     return this.members.has(`${conversationId}|${userId}`);
+  }
+
+  async listByUserId(userId: UserId): Promise<readonly ConversationId[]> {
+    return this.conversationsByUser.get(userId) || [];
+  }
+
+  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+    return this.usersByConversation.get(conversationId) || [];
   }
 }
 

@@ -6,6 +6,7 @@ import { makeHttpHandlers } from "./app/httpHandlers";
 import { sessionRoutes } from "./app/sessionRoutes";
 import { makeWsApp } from "./app/ws";
 import { env } from "./shared/env";
+import { ConversationIdSchema, UserIdSchema } from "./shared/ids";
 import cors from "@elysiajs/cors";
 
 const services = composeApp();
@@ -62,7 +63,10 @@ const app = new Elysia()
   .get(
     "/conversations/:conversationId/members",
     ({ params, userId }) =>
-      handlers.listConversationMembers(userId, params.conversationId),
+      handlers.listConversationMembers(
+        userId,
+        ConversationIdSchema.parse(params.conversationId),
+      ),
     {
       auth: true,
       params: t.Object({
@@ -75,8 +79,8 @@ const app = new Elysia()
     ({ params, body, userId }) =>
       handlers.addMemberToConversation(
         userId,
-        params.conversationId,
-        body.userId,
+        ConversationIdSchema.parse(params.conversationId),
+        UserIdSchema.parse(body.userId),
       ),
     {
       auth: true,
