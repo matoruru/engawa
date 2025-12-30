@@ -49,8 +49,8 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
 class InMemoryUserRepo implements UserRepository {
   private readonly users = new Map<string, User>();
 
-  addUser(id: string, username: string, displayName: string) {
-    this.users.set(id, { id, username, displayName });
+  addUser(id: string, username: string, displayName: string, avatarUrl: string | null = null) {
+    this.users.set(id, { id, username, displayName, avatarUrl });
   }
 
   async findByIds(userIds: readonly UserId[]): Promise<readonly User[]> {

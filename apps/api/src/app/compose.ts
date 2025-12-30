@@ -211,6 +211,7 @@ export const composeApp = (): AppServices => {
 
   const getInvite = makeGetInvite({
     invitesRepo,
+    userRepo,
     now: () => new Date(),
   });
 

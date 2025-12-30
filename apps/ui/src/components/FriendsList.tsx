@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { UserMinus, Users, Link2, Copy, Check } from "lucide-react";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
@@ -11,6 +11,7 @@ interface Friend {
   id: string;
   username: string;
   displayName: string;
+  avatarUrl: string | null;
 }
 
 interface FriendsListProps {
@@ -41,6 +42,7 @@ export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
           id: string;
           username: string;
           displayName: string;
+          avatarUrl: string | null;
         }>;
         setFriends(friendsData);
       }
@@ -184,9 +186,13 @@ export function FriendsList({ apiUrl, currentUserId }: FriendsListProps) {
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {getInitials(friend.displayName)}
-                        </AvatarFallback>
+                        {friend.avatarUrl ? (
+                          <AvatarImage src={friend.avatarUrl} alt={friend.displayName} />
+                        ) : (
+                          <AvatarFallback>
+                            {getInitials(friend.displayName)}
+                          </AvatarFallback>
+                        )}
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">{friend.displayName}</p>

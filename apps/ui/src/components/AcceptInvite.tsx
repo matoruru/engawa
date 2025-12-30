@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { UserCheck, AlertCircle } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
@@ -16,11 +16,12 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
     inviterId: string;
     expiresAt: string;
     acceptedAt: string | null;
-  } | null>(null);
-  const [inviter, setInviter] = useState<{
-    id: string;
-    username: string;
-    displayName: string;
+    inviter: {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl: string | null;
+    } | null;
   } | null>(null);
   const [status, setStatus] = useState<"loading" | "notFound" | "expired" | "alreadyAccepted" | "ready" | "accepted">("loading");
   const [isAccepting, setIsAccepting] = useState(false);
@@ -42,36 +43,14 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
               inviterId: string;
               expiresAt: string;
               acceptedAt: string | null;
+              inviter: {
+                id: string;
+                username: string;
+                displayName: string;
+                avatarUrl: string | null;
+              } | null;
             };
             setInvite(inviteData);
-            
-            // 招待者の情報を取得
-            try {
-              const searchResponse = await fetch(
-                `${apiUrl}/users/search?q=${encodeURIComponent(inviteData.inviterId)}`,
-                {
-                  method: "GET",
-                  credentials: "include",
-                }
-              );
-              if (searchResponse.ok) {
-                const searchData = await searchResponse.json();
-                if (searchData.users) {
-                  const users = searchData.users as Array<{
-                    id: string;
-                    username: string;
-                    displayName: string;
-                  }>;
-                  const inviterUser = users.find((u) => u.id === inviteData.inviterId);
-                  if (inviterUser) {
-                    setInviter(inviterUser);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error("Failed to fetch inviter:", error);
-            }
-            
             setStatus("ready");
           } else if (data.error) {
             const error = data.error as string;
@@ -223,7 +202,7 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
               友達になりました！
             </CardTitle>
             <CardDescription>
-              {inviter?.displayName}さんと友達になりました。
+              {invite?.inviter?.displayName || "ユーザー"}さんと友達になりました。
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -245,9 +224,9 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
         <CardHeader>
           <CardTitle>友達招待</CardTitle>
           <CardDescription>
-            {inviter ? (
+            {invite?.inviter ? (
               <>
-                <span className="font-medium">{inviter.displayName}</span>
+                <span className="font-medium">{invite.inviter.displayName}</span>
                 さんからの招待
               </>
             ) : (
@@ -256,16 +235,24 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {inviter && (
+          {invite?.inviter && (
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarFallback className="text-xl">
-                  {getInitials(inviter.displayName)}
-                </AvatarFallback>
+                {invite.inviter.avatarUrl ? (
+                  <AvatarImage 
+                    src={invite.inviter.avatarUrl} 
+                    alt={invite.inviter.displayName}
+                    className="object-cover"
+                  />
+                ) : (
+                  <AvatarFallback className="text-xl bg-primary/10">
+                    {getInitials(invite.inviter.displayName)}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="text-center">
-                <h2 className="text-lg font-semibold">{inviter.displayName}</h2>
-                <p className="text-sm text-muted-foreground">@{inviter.username}</p>
+                <h2 className="text-lg font-semibold">{invite.inviter.displayName}</h2>
+                <p className="text-sm text-muted-foreground">@{invite.inviter.username}</p>
               </div>
             </div>
           )}

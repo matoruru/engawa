@@ -8,6 +8,7 @@ const UserRowSchema = z.object({
   id: z.string(),
   username: z.string(),
   display_name: z.string().nullable(),
+  avatar_url: z.string().nullable(),
 });
 
 export const makePostgresUserRepo = (
@@ -33,70 +34,70 @@ export const makePostgresUserRepo = (
     let rows: unknown[];
     if (userIds.length === 1) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id = ${userIds[0]}
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 2) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]})
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 3) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]})
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 4) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]}, ${userIds[3]})
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 5) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]}, ${userIds[3]}, ${userIds[4]})
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 6) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]}, ${userIds[3]}, ${userIds[4]}, ${userIds[5]})
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 7) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]}, ${userIds[3]}, ${userIds[4]}, ${userIds[5]}, ${userIds[6]})
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 8) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]}, ${userIds[3]}, ${userIds[4]}, ${userIds[5]}, ${userIds[6]}, ${userIds[7]})
         ORDER BY display_name ASC, username ASC
       `;
     } else if (userIds.length === 9) {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]}, ${userIds[3]}, ${userIds[4]}, ${userIds[5]}, ${userIds[6]}, ${userIds[7]}, ${userIds[8]})
         ORDER BY display_name ASC, username ASC
       `;
     } else {
       rows = await db`
-        SELECT id, username, display_name
+        SELECT id, username, display_name, avatar_url
         FROM users
         WHERE id IN (${userIds[0]}, ${userIds[1]}, ${userIds[2]}, ${userIds[3]}, ${userIds[4]}, ${userIds[5]}, ${userIds[6]}, ${userIds[7]}, ${userIds[8]}, ${userIds[9]})
         ORDER BY display_name ASC, username ASC
@@ -109,6 +110,7 @@ export const makePostgresUserRepo = (
       id: String(row.id),
       username: String(row.username),
       displayName: String(row.display_name || row.username),
+      avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
     }));
   },
 });

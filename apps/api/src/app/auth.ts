@@ -44,14 +44,15 @@ export const auth = betterAuth({
           // 失敗したら例外でロールバックさせたいので、ここは握りつぶさない
           await pool.query(
             `
-            INSERT INTO users (id, username, display_name)
-            VALUES ($1::uuid, $2, $3)
+            INSERT INTO users (id, username, display_name, avatar_url)
+            VALUES ($1::uuid, $2, $3, $4)
             ON CONFLICT (id) DO NOTHING
             `,
             [
               appUserId,
               makeInitialUsername(createdUser.id, createdUser.email),
               createdUser.name,
+              createdUser.image || null,
             ],
           );
 

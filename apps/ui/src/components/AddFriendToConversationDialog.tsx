@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { X, UserPlus } from "lucide-react";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
@@ -10,6 +10,7 @@ interface Friend {
   id: string;
   username: string;
   displayName: string;
+  avatarUrl: string | null;
 }
 
 interface AddFriendToConversationDialogProps {
@@ -53,6 +54,7 @@ export function AddFriendToConversationDialog({
             id: string;
             username: string;
             displayName: string;
+            avatarUrl: string | null;
           }>;
           setFriends(friendsData);
         }
@@ -168,9 +170,13 @@ export function AddFriendToConversationDialog({
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        {getInitials(friend.displayName)}
-                      </AvatarFallback>
+                      {friend.avatarUrl ? (
+                        <AvatarImage src={friend.avatarUrl} alt={friend.displayName} />
+                      ) : (
+                        <AvatarFallback>
+                          {getInitials(friend.displayName)}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium">{friend.displayName}</p>
