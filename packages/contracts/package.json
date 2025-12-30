@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "exports": {
-    ".": "./index.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@kaiwa/api": "workspace:*"
