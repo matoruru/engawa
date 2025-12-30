@@ -3,12 +3,22 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Plus, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface ConversationPreview {
+  conversationId: string;
+  latestMessages: Array<{
+    messageText: string;
+    senderId: string;
+    createdAt: string;
+  }>;
+}
+
 interface ConversationListProps {
-  conversations: string[];
+  conversations: ConversationPreview[];
   selectedConversationId: string | null;
   onSelectConversation: (conversationId: string) => void;
   onCreateConversation: () => void;
   isCreatingConversation: boolean;
+  currentUserId: string;
 }
 
 export function ConversationList({
@@ -17,6 +27,7 @@ export function ConversationList({
   onSelectConversation,
   onCreateConversation,
   isCreatingConversation,
+  currentUserId,
 }: ConversationListProps) {
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -52,14 +63,14 @@ export function ConversationList({
             </div>
           ) : (
             <div className="space-y-1">
-              {conversations.map((conversationId) => (
+              {conversations.map((conversation) => (
                 <button
-                  key={conversationId}
-                  onClick={() => onSelectConversation(conversationId)}
+                  key={conversation.conversationId}
+                  onClick={() => onSelectConversation(conversation.conversationId)}
                   className={cn(
                     "w-full rounded-lg px-4 py-3 text-left transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
-                    selectedConversationId === conversationId
+                    selectedConversationId === conversation.conversationId
                       ? "bg-accent text-accent-foreground"
                       : ""
                   )}
@@ -70,11 +81,21 @@ export function ConversationList({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        会話 {conversationId.slice(0, 8)}
+                        会話 {conversation.conversationId.slice(0, 8)}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        ID: {conversationId}
-                      </p>
+                      {conversation.latestMessages.length > 0 ? (
+                        <div className="space-y-0.5 mt-1">
+                          {conversation.latestMessages.slice(-2).map((message, idx) => (
+                            <p key={idx} className="text-xs text-muted-foreground truncate">
+                              {message.senderId === currentUserId ? "あなた" : "相手"}: {message.messageText}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground truncate">
+                          メッセージがありません
+                        </p>
+                      )}
                     </div>
                   </div>
                 </button>

@@ -140,6 +140,7 @@ export const composeApp = (): AppServices => {
 
   const listConversations = makeListConversations({
     membersRepo,
+    messageQueryRepo,
   });
 
   const addMemberToConversation = makeAddMemberToConversation({

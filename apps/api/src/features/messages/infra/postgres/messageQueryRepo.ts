@@ -55,4 +55,33 @@ export const makePostgresMessageQueryRepo = (
       MessageSchema.parse(messageRowToDomainInput(r)),
     );
   },
+
+  listLatestByConversation: async (
+    conversationId: ConversationId,
+    limit: number,
+  ): Promise<readonly Message[]> => {
+    const rows = await db`
+      SELECT
+        message_id,
+        conversation_id,
+        sender_id,
+        client_message_id,
+        message_text,
+        created_at
+      FROM messages
+      WHERE conversation_id = ${conversationId}
+      ORDER BY message_id DESC
+      LIMIT ${limit}
+    `;
+
+    // row配列として検証
+    const parsedRows = z.array(MessageRowSchema).parse(rows);
+
+    // ドメインに変換（降順で取得したので、時系列順に並び替える）
+    const messages = parsedRows
+      .map((r) => MessageSchema.parse(messageRowToDomainInput(r)))
+      .reverse();
+
+    return messages;
+  },
 });

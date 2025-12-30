@@ -21,4 +21,10 @@ export interface MessageQueryRepository {
   listByConversation(
     params: ListByConversationParams,
   ): Promise<readonly Message[]>;
+  
+  // 会話の最新N件のメッセージを取得（降順）
+  listLatestByConversation(
+    conversationId: ConversationId,
+    limit: number,
+  ): Promise<readonly Message[]>;
 }

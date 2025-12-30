@@ -11,7 +11,7 @@ function App() {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const { user, appUserId, isLoading, refreshSession } = useAuth(apiUrl);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<string[]>([]);
+  const [conversations, setConversations] = useState<Array<{ conversationId: string; latestMessages: Array<{ messageText: string; senderId: string; createdAt: string }> }>>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -53,10 +53,17 @@ function App() {
         const response = await app.conversations.get();
 
         if (response.data && "conversations" in response.data) {
-          const conversationList = response.data.conversations as string[];
+          const conversationList = Array.from(response.data.conversations).map((c: any) => ({
+            conversationId: c.conversationId,
+            latestMessages: Array.from(c.latestMessages || []).map((m: any) => ({
+              messageText: m.messageText,
+              senderId: m.senderId,
+              createdAt: m.createdAt,
+            })),
+          }));
           setConversations(conversationList);
           if (conversationList.length > 0 && !conversationId) {
-            setConversationId(conversationList[0]);
+            setConversationId(conversationList[0].conversationId);
           }
         }
       } catch (error) {
@@ -84,7 +91,10 @@ function App() {
 
       if (response.data && "conversationId" in response.data) {
         const newConversationId = response.data.conversationId as string;
-        setConversations((prev) => [newConversationId, ...prev]);
+        setConversations((prev) => [
+          { conversationId: newConversationId, latestMessages: [] },
+          ...prev,
+        ]);
         setConversationId(newConversationId);
         setShowConversationList(false);
       }
@@ -125,6 +135,7 @@ function App() {
         onSelectConversation={handleSelectConversation}
         onCreateConversation={handleCreateConversation}
         isCreatingConversation={isCreatingConversation}
+        currentUserId={appUserId || ""}
       />
     );
   }

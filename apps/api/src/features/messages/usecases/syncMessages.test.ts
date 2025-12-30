@@ -71,6 +71,19 @@ class InMemoryMessageQueryRepo implements MessageQueryRepository {
 
     return filtered.slice(0, params.limit);
   }
+
+  async listLatestByConversation(
+    conversationId: ConversationId,
+    limit: number,
+  ): Promise<readonly Message[]> {
+    const byConv = this.all
+      .filter((m) => m.conversationId === conversationId)
+      .sort((a, b) =>
+        a.messageId > b.messageId ? -1 : a.messageId < b.messageId ? 1 : 0,
+      );
+
+    return byConv.slice(0, limit).reverse();
+  }
 }
 
 class SpyQueryRepo implements MessageQueryRepository {
@@ -81,6 +94,12 @@ class SpyQueryRepo implements MessageQueryRepository {
   ): Promise<readonly Message[]> {
     this.called += 1;
     return this.inner.listByConversation(params);
+  }
+  async listLatestByConversation(
+    conversationId: ConversationId,
+    limit: number,
+  ): Promise<readonly Message[]> {
+    return this.inner.listLatestByConversation(conversationId, limit);
   }
 }
 
