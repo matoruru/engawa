@@ -12,6 +12,10 @@ const services = composeApp();
 const handlers = makeHttpHandlers(services);
 
 const app = new Elysia()
+  .use(cors({
+    origin: env.ALLOWED_ORIGINS.split(","),
+    credentials: true, // Allow cookies
+  }))
 
   // BetterAuth endpoints
   .mount(auth.handler)
@@ -34,18 +38,14 @@ const app = new Elysia()
     ({ body, userId }) => handlers.updateReadCursor(userId, body),
     { auth: true },
   )
-  .listen(env.PORT);
 
   const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
   if (!isProd) {
     app.use(sessionRoutes);
   }
 
-  app.use(cors({
-    origin: env.ALLOWED_ORIGINS.split(","),
-  }));
-
-
-console.log(`Listening on http://localhost:${env.PORT}`);
+  app.listen(env.PORT, () => {
+    console.log(`Listening on http://localhost:${env.PORT}`);
+  });
 
 export type App = typeof app;
