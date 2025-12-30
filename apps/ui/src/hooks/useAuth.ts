@@ -17,28 +17,50 @@ interface Session {
 
 export function useAuth(apiUrl: string) {
   const [user, setUser] = useState<User | null>(null);
+  const [appUserId, setAppUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkSession = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/auth/get-session`, {
+      const sessionResponse = await fetch(`${apiUrl}/api/auth/get-session`, {
         method: "GET",
         credentials: "include",
       });
 
-      if (response.ok) {
-        const data = (await response.json()) as { user: User; session: Session["session"] } | null;
-        if (data?.user) {
-          setUser(data.user);
+      if (sessionResponse.ok) {
+        const sessionData = (await sessionResponse.json()) as { user: User; session: Session["session"] } | null;
+        if (sessionData?.user) {
+          setUser(sessionData.user);
+
+          // アプリのユーザーIDを取得
+          try {
+            const meResponse = await fetch(`${apiUrl}/me`, {
+              method: "GET",
+              credentials: "include",
+            });
+
+            if (meResponse.ok) {
+              const meData = (await meResponse.json()) as { userId: string };
+              setAppUserId(meData.userId);
+            } else {
+              setAppUserId(null);
+            }
+          } catch (error) {
+            console.error("Failed to get app user ID:", error);
+            setAppUserId(null);
+          }
         } else {
           setUser(null);
+          setAppUserId(null);
         }
       } else {
         setUser(null);
+        setAppUserId(null);
       }
     } catch (error) {
       console.error("Failed to check session:", error);
       setUser(null);
+      setAppUserId(null);
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +85,21 @@ export function useAuth(apiUrl: string) {
       if (response.ok) {
         const data = (await response.json()) as { user: User; session: Session["session"] };
         setUser(data.user);
+
+        // アプリのユーザーIDを取得
+        try {
+          const meResponse = await fetch(`${apiUrl}/me`, {
+            method: "GET",
+            credentials: "include",
+          });
+          if (meResponse.ok) {
+            const meData = (await meResponse.json()) as { userId: string };
+            setAppUserId(meData.userId);
+          }
+        } catch (error) {
+          console.error("Failed to get app user ID:", error);
+        }
+
         return { success: true };
       } else {
         const error = await response.json();
@@ -88,6 +125,21 @@ export function useAuth(apiUrl: string) {
       if (response.ok) {
         const data = (await response.json()) as { user: User; session: Session["session"] };
         setUser(data.user);
+
+        // アプリのユーザーIDを取得
+        try {
+          const meResponse = await fetch(`${apiUrl}/me`, {
+            method: "GET",
+            credentials: "include",
+          });
+          if (meResponse.ok) {
+            const meData = (await meResponse.json()) as { userId: string };
+            setAppUserId(meData.userId);
+          }
+        } catch (error) {
+          console.error("Failed to get app user ID:", error);
+        }
+
         return { success: true };
       } else {
         const error = await response.json();
@@ -118,6 +170,7 @@ export function useAuth(apiUrl: string) {
 
   return {
     user,
+    appUserId,
     isLoading,
     signInWithEmail,
     signUpWithEmail,

@@ -106,10 +106,24 @@ export function Chat({
   useEffect(() => {
     const unsubscribeMessageCreated = ws.on("message.created", (event) => {
       setMessages((prev) => {
-        // 重複チェック
+        // messageIdで重複チェック
         if (prev.some((m) => m.messageId === event.payload.messageId)) {
           return prev;
         }
+
+        // clientMessageIdで重複チェック（楽観的更新のメッセージを置き換え）
+        const existingIndex = prev.findIndex(
+          (m) => m.clientMessageId === event.payload.clientMessageId
+        );
+
+        if (existingIndex >= 0) {
+          // 楽観的更新のメッセージを実際のメッセージで置き換え
+          const newMessages = [...prev];
+          newMessages[existingIndex] = event.payload;
+          return newMessages;
+        }
+
+        // 新規メッセージとして追加
         return [...prev, event.payload];
       });
     });
@@ -157,12 +171,26 @@ export function Chat({
         },
       });
 
-      // 楽観的更新のメッセージを削除（実際のメッセージが来たら置き換わる）
+      // 楽観的更新のメッセージは、実際のメッセージが来たら自動的に置き換わる
+      // タイムアウトで削除する（実際のメッセージが来なかった場合のフォールバック）
       setTimeout(() => {
-        setMessages((prev) =>
-          prev.filter((m) => m.messageId !== optimisticMessage.messageId)
-        );
-      }, 1000);
+        setMessages((prev) => {
+          // clientMessageIdで楽観的更新のメッセージを探す
+          const optimisticIndex = prev.findIndex(
+            (m) => m.clientMessageId === clientMessageId && m.messageId.startsWith("temp-")
+          );
+          if (optimisticIndex >= 0) {
+            // 実際のメッセージがまだ来ていない場合のみ削除
+            const hasRealMessage = prev.some(
+              (m) => m.clientMessageId === clientMessageId && !m.messageId.startsWith("temp-")
+            );
+            if (!hasRealMessage) {
+              return prev.filter((_, index) => index !== optimisticIndex);
+            }
+          }
+          return prev;
+        });
+      }, 5000);
     } catch (error) {
       console.error("Failed to send message:", error);
       // エラー時は楽観的更新を削除
@@ -230,7 +258,6 @@ export function Chat({
             </div>
           ) : (
             messages.map((message) => {
-              console.log(`message: ${message.messageId} ${message.senderId} ${currentUserId}`)
               const isOwn = message.senderId === currentUserId;
               return (
                 <div

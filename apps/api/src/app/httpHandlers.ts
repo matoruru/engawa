@@ -69,4 +69,8 @@ export const makeHttpHandlers = (svc: AppServices) => ({
 
     return { conversationId };
   },
+
+  getCurrentUser: async (userId: UserId) => {
+    return { userId };
+  },
 });

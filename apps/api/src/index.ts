@@ -44,6 +44,11 @@ const app = new Elysia()
     ({ userId }) => handlers.createConversation(userId),
     { auth: true },
   )
+  .get(
+    "/me",
+    ({ userId }) => handlers.getCurrentUser(userId),
+    { auth: true },
+  )
 
   const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
   if (!isProd) {

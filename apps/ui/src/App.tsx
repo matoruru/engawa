@@ -9,7 +9,7 @@ import type { App as AppContract } from "@kaiwa/contracts";
 
 function App() {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-  const { user, isLoading, refreshSession } = useAuth(apiUrl);
+  const { user, appUserId, isLoading, refreshSession } = useAuth(apiUrl);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<string[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
@@ -135,7 +135,7 @@ function App() {
       <div className="h-screen w-screen overflow-hidden">
         <Chat
           conversationId={conversationId}
-          currentUserId={user.id}
+          currentUserId={appUserId || ""}
           apiUrl={apiUrl}
           wsUrl={import.meta.env.VITE_WS_URL}
           onBack={handleBackToList}
