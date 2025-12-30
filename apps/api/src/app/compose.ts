@@ -1,4 +1,5 @@
 import z from "zod";
+import { randomBytes } from "crypto";
 import { env } from "@/shared/env";
 import { ConversationIdSchema, MessageIdSchema, type UserId, UserIdSchema } from "@/shared/ids";
 import {
@@ -47,6 +48,34 @@ import {
   type UpdateReadCursorResult,
 } from "../features/reads/usecases/updateReadCursor";
 import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
+import { makePostgresFriendshipsRepo } from "../features/friendships/infra/postgres/friendshipsRepo";
+import {
+  makeListFriends,
+  type ListFriendsInput,
+  type ListFriendsResult,
+} from "../features/friendships/usecases/listFriends";
+import {
+  makeRemoveFriend,
+  type RemoveFriendInput,
+  type RemoveFriendResult,
+} from "../features/friendships/usecases/removeFriend";
+import { makePostgresInvitesRepo } from "../features/invites/infra/postgres/invitesRepo";
+import {
+  makeCreateInvite,
+  type CreateInviteInput,
+  type CreateInviteResult,
+} from "../features/invites/usecases/createInvite";
+import {
+  makeGetInvite,
+  type GetInviteInput,
+  type GetInviteResult,
+} from "../features/invites/usecases/getInvite";
+import {
+  makeAcceptInvite,
+  type AcceptInviteInput,
+  type AcceptInviteResult,
+} from "../features/invites/usecases/acceptInvite";
+import { InviteTokenSchema } from "../features/invites/domain";
 
 const UserIdRowSchema = z.object({ user_id: z.string() });
 
@@ -73,6 +102,11 @@ export type AppServices = {
   listConversationMembers: (
     input: ListConversationMembersInput,
   ) => Promise<ListConversationMembersResult>;
+  listFriends: (input: ListFriendsInput) => Promise<ListFriendsResult>;
+  removeFriend: (input: RemoveFriendInput) => Promise<RemoveFriendResult>;
+  createInvite: (input: CreateInviteInput) => Promise<CreateInviteResult>;
+  getInvite: (input: GetInviteInput) => Promise<GetInviteResult>;
+  acceptInvite: (input: AcceptInviteInput) => Promise<AcceptInviteResult>;
 };
 
 export const composeApp = (): AppServices => {
@@ -96,6 +130,8 @@ export const composeApp = (): AppServices => {
   // shared port
   const membersRepo = makePostgresConversationMembersRepo(db);
   const userRepo = makePostgresUserRepo(db);
+  const friendshipsRepo = makePostgresFriendshipsRepo(db);
+  const invitesRepo = makePostgresInvitesRepo(db);
 
   // conversations
   const conversationRepo = makePostgresConversationRepo(db);
@@ -152,6 +188,38 @@ export const composeApp = (): AppServices => {
     membersRepo,
   });
 
+  // friendships usecases
+  const listFriends = makeListFriends({
+    friendshipsRepo,
+    userRepo,
+  });
+
+  const removeFriend = makeRemoveFriend({
+    friendshipsRepo,
+  });
+
+  // invites usecases
+  const createInvite = makeCreateInvite({
+    invitesRepo,
+    generateToken: () => {
+      // crypto.randomBytesを使ってランダムなトークンを生成（32バイト = 64文字のhex）
+      const token = randomBytes(32).toString("hex");
+      return InviteTokenSchema.parse(token);
+    },
+    now: () => new Date(),
+  });
+
+  const getInvite = makeGetInvite({
+    invitesRepo,
+    now: () => new Date(),
+  });
+
+  const acceptInvite = makeAcceptInvite({
+    invitesRepo,
+    friendshipsRepo,
+    now: () => new Date(),
+  });
+
   return {
     db,
     membersRepo,
@@ -163,5 +231,10 @@ export const composeApp = (): AppServices => {
     listConversations,
     addMemberToConversation,
     listConversationMembers,
+    listFriends,
+    removeFriend,
+    createInvite,
+    getInvite,
+    acceptInvite,
   };
 };

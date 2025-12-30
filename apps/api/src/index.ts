@@ -93,6 +93,47 @@ const app = new Elysia()
       }),
     },
   )
+  .get(
+    "/friends",
+    ({ userId }) => handlers.listFriends(userId),
+    { auth: true },
+  )
+  .delete(
+    "/friends/:friendId",
+    ({ params, userId }) =>
+      handlers.removeFriend(userId, { friendId: UserIdSchema.parse(params.friendId) }),
+    {
+      auth: true,
+      params: t.Object({
+        friendId: t.String(),
+      }),
+    },
+  )
+  .post(
+    "/invites",
+    ({ userId }) => handlers.createInvite(userId),
+    { auth: true },
+  )
+  .get(
+    "/invites/:token",
+    ({ params }) => handlers.getInvite(params.token),
+    {
+      auth: false, // 認証不要（招待リンクは誰でも開ける）
+      params: t.Object({
+        token: t.String(),
+      }),
+    },
+  )
+  .post(
+    "/invites/:token/accept",
+    ({ params, userId }) => handlers.acceptInvite(userId, params.token),
+    {
+      auth: true,
+      params: t.Object({
+        token: t.String(),
+      }),
+    },
+  )
 
   if (isDevRuntime()) {
     app.use(sessionRoutes);

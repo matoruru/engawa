@@ -10,6 +10,12 @@ import { CreateConversationInputSchema } from "../features/conversations/usecase
 import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
 import { AddMemberToConversationInputSchema } from "../features/conversations/usecases/addMemberToConversation";
 import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
+import { ListFriendsInputSchema } from "../features/friendships/usecases/listFriends";
+import { RemoveFriendInputSchema } from "../features/friendships/usecases/removeFriend";
+import { CreateInviteInputSchema } from "../features/invites/usecases/createInvite";
+import { GetInviteInputSchema } from "../features/invites/usecases/getInvite";
+import { AcceptInviteInputSchema } from "../features/invites/usecases/acceptInvite";
+import { InviteTokenSchema } from "../features/invites/domain";
 import type { AppServices } from "./compose";
 
 // HTTPは senderId/userId を受け取らない。認証から userId を取得して使う。
@@ -141,5 +147,68 @@ export const makeHttpHandlers = (svc: AppServices) => ({
       return { success: false, error: result.reason };
     }
     throw new Error("Unexpected result from listConversationMembers");
+  },
+
+  listFriends: async (userId: UserId) => {
+    const input = ListFriendsInputSchema.parse({ userId });
+    const result = await svc.listFriends(input);
+    if (result.kind === "ok") {
+      return { friends: result.friends };
+    }
+    throw new Error("Unexpected result from listFriends");
+  },
+
+  createInvite: async (userId: UserId) => {
+    const input = CreateInviteInputSchema.parse({ userId });
+    const result = await svc.createInvite(input);
+    if (result.kind === "created") {
+      return { token: result.token, inviteUrl: result.inviteUrl };
+    }
+    throw new Error("Unexpected result from createInvite");
+  },
+
+  getInvite: async (token: string) => {
+    const input = GetInviteInputSchema.parse({ token: InviteTokenSchema.parse(token) });
+    const result = await svc.getInvite(input);
+    if (result.kind === "ok") {
+      return { invite: result.invite };
+    } else if (result.kind === "notFound") {
+      return { error: "NOT_FOUND" };
+    } else if (result.kind === "expired") {
+      return { error: "EXPIRED" };
+    } else if (result.kind === "alreadyAccepted") {
+      return { error: "ALREADY_ACCEPTED" };
+    }
+    throw new Error("Unexpected result from getInvite");
+  },
+
+  acceptInvite: async (userId: UserId, token: string) => {
+    const input = AcceptInviteInputSchema.parse({
+      token: InviteTokenSchema.parse(token),
+      userId,
+    });
+    const result = await svc.acceptInvite(input);
+    if (result.kind === "accepted") {
+      return { success: true };
+    } else if (result.kind === "notFound") {
+      return { success: false, error: "NOT_FOUND" };
+    } else if (result.kind === "expired") {
+      return { success: false, error: "EXPIRED" };
+    } else if (result.kind === "alreadyAccepted") {
+      return { success: false, error: "ALREADY_ACCEPTED" };
+    } else if (result.kind === "conflict") {
+      return { success: false, error: result.reason };
+    }
+    throw new Error("Unexpected result from acceptInvite");
+  },
+
+  removeFriend: async (userId: UserId, body: unknown) => {
+    const b = z.object({ friendId: UserIdSchema }).parse(body);
+    const input = RemoveFriendInputSchema.parse({ userId, friendId: b.friendId });
+    const result = await svc.removeFriend(input);
+    if (result.kind === "removed") {
+      return { success: true };
+    }
+    throw new Error("Unexpected result from removeFriend");
   },
 });

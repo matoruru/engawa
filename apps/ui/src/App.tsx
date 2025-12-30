@@ -3,6 +3,7 @@ import { Chat } from "./components/Chat";
 import { Login } from "./components/Login";
 import { ConversationList } from "./components/ConversationList";
 import { Profile } from "./components/Profile";
+import { AcceptInvite } from "./components/AcceptInvite";
 import { Button } from "./components/ui/button";
 import { useAuth } from "./hooks/useAuth";
 import { treaty } from "@elysiajs/eden";
@@ -129,6 +130,17 @@ function App() {
     setShowConversationList(true);
   };
 
+  // 招待リンクの処理
+  const inviteToken = useMemo(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/invites\/(.+)$/);
+    return match ? match[1] : null;
+  }, []);
+
+  if (inviteToken) {
+    return <AcceptInvite token={inviteToken} apiUrl={apiUrl} />;
+  }
+
   if (isLoading || isLoadingConversations) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -148,6 +160,8 @@ function App() {
         user={user}
         onBack={handleBackToList}
         onSignOut={handleSignOut}
+        apiUrl={apiUrl}
+        currentUserId={appUserId || ""}
       />
     );
   }
