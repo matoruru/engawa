@@ -3,13 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "workspaces": [
+    "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev:server": "bun --cwd packages/server dev",
-    "dev:ui": "bun --cwd packages/ui/browser dev",
-    "test:server": "bun --cwd packages/server test",
-    "build:ui": "bun --cwd packages/ui/browser build"
+    "dev:api": "bun --cwd apps/api dev",
+    "dev:ui": "bun --cwd apps/ui dev",
+    "test:api": "bun --cwd apps/api test",
+    "build:ui": "bun --cwd apps/ui build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.10"
