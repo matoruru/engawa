@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Plus, MessageSquare } from "lucide-react";
+import { Plus, MessageSquare, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConversationPreview {
@@ -19,6 +19,7 @@ interface ConversationListProps {
   onCreateConversation: () => void;
   isCreatingConversation: boolean;
   currentUserId: string;
+  onOpenProfile: () => void;
 }
 
 export function ConversationList({
@@ -28,6 +29,7 @@ export function ConversationList({
   onCreateConversation,
   isCreatingConversation,
   currentUserId,
+  onOpenProfile,
 }: ConversationListProps) {
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -35,14 +37,23 @@ export function ConversationList({
       <div className="border-b border-border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">会話</h1>
-          <Button
-            onClick={onCreateConversation}
-            disabled={isCreatingConversation}
-            size="icon"
-            variant="ghost"
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={onCreateConversation}
+              disabled={isCreatingConversation}
+              size="icon"
+              variant="ghost"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={onOpenProfile}
+              size="icon"
+              variant="ghost"
+            >
+              <User className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
 

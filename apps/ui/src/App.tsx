@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Chat } from "./components/Chat";
 import { Login } from "./components/Login";
 import { ConversationList } from "./components/ConversationList";
+import { Profile } from "./components/Profile";
 import { Button } from "./components/ui/button";
 import { useAuth } from "./hooks/useAuth";
 import { treaty } from "@elysiajs/eden";
@@ -9,13 +10,14 @@ import type { App as AppContract } from "@kaiwa/contracts";
 
 function App() {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-  const { user, appUserId, isLoading, refreshSession } = useAuth(apiUrl);
+  const { user, appUserId, isLoading, refreshSession, signOut } = useAuth(apiUrl);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Array<{ conversationId: string; latestMessages: Array<{ messageText: string; senderId: string; createdAt: string }> }>>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
 
   const app = useMemo(
     () =>
@@ -112,6 +114,19 @@ function App() {
 
   const handleBackToList = () => {
     setShowConversationList(true);
+    setShowProfile(false);
+  };
+
+  const handleOpenProfile = () => {
+    setShowProfile(true);
+    setShowConversationList(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsAuthenticated(false);
+    setShowProfile(false);
+    setShowConversationList(true);
   };
 
   if (isLoading || isLoadingConversations) {
@@ -126,6 +141,17 @@ function App() {
     return <Login apiUrl={apiUrl} onLoginSuccess={handleLoginSuccess} />;
   }
 
+  // プロフィール画面を表示
+  if (showProfile) {
+    return (
+      <Profile
+        user={user}
+        onBack={handleBackToList}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
   // 会話一覧を表示
   if (showConversationList) {
     return (
@@ -136,6 +162,7 @@ function App() {
         onCreateConversation={handleCreateConversation}
         isCreatingConversation={isCreatingConversation}
         currentUserId={appUserId || ""}
+        onOpenProfile={handleOpenProfile}
       />
     );
   }
