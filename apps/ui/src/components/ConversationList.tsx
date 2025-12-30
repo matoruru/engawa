@@ -32,28 +32,11 @@ export function ConversationList({
   onOpenProfile,
 }: ConversationListProps) {
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="relative flex h-screen flex-col bg-background">
       {/* ヘッダー */}
       <div className="border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           <h1 className="text-lg font-semibold">会話</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={onCreateConversation}
-              disabled={isCreatingConversation}
-              size="icon"
-              variant="ghost"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={onOpenProfile}
-              size="icon"
-              variant="ghost"
-            >
-              <User className="h-5 w-5" />
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -115,6 +98,44 @@ export function ConversationList({
           )}
         </div>
       </ScrollArea>
+
+      {/* タブバー */}
+      <div className="border-t border-border bg-card safe-area-inset-bottom">
+        <div className="flex">
+          <button
+            onClick={() => {}}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
+              "text-primary bg-primary/10"
+            )}
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-xs font-medium">会話</span>
+          </button>
+          <button
+            onClick={onOpenProfile}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
+              "text-muted-foreground hover:text-foreground hover:bg-accent"
+            )}
+          >
+            <User className="h-5 w-5" />
+            <span className="text-xs font-medium">プロフィール</span>
+          </button>
+        </div>
+      </div>
+
+      {/* フローティングアクションボタン */}
+      <div className="absolute bottom-24 right-4 safe-area-inset-bottom">
+        <Button
+          onClick={onCreateConversation}
+          disabled={isCreatingConversation}
+          size="icon"
+          className="h-14 w-14 rounded-full shadow-lg bg-blue-500 hover:bg-blue-600 text-white"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
     </div>
   );
 }

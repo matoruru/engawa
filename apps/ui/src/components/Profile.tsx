@@ -1,7 +1,8 @@
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { ArrowLeft, LogOut, User } from "lucide-react";
+import { ArrowLeft, LogOut, User, MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -30,14 +31,7 @@ export function Profile({ user, onBack, onSignOut }: ProfileProps) {
     <div className="flex h-screen flex-col bg-background">
       {/* ヘッダー */}
       <div className="border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={onBack}
-            size="icon"
-            variant="ghost"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+        <div className="flex items-center">
           <h1 className="text-lg font-semibold">プロフィール</h1>
         </div>
       </div>
@@ -97,6 +91,32 @@ export function Profile({ user, onBack, onSignOut }: ProfileProps) {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* タブバー */}
+      <div className="border-t border-border bg-card safe-area-inset-bottom">
+        <div className="flex">
+          <button
+            onClick={onBack}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
+              "text-muted-foreground hover:text-foreground hover:bg-accent"
+            )}
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-xs font-medium">会話</span>
+          </button>
+          <button
+            onClick={() => {}}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
+              "text-primary bg-primary/10"
+            )}
+          >
+            <User className="h-5 w-5" />
+            <span className="text-xs font-medium">プロフィール</span>
+          </button>
+        </div>
       </div>
     </div>
   );
