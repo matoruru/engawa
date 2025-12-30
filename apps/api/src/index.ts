@@ -16,10 +16,6 @@ const app = new Elysia()
     origin: env.ALLOWED_ORIGINS.split(","),
     credentials: true, // Allow cookies
   }))
-
-  // BetterAuth endpoints
-  .mount(auth.handler)
-
   .use(makeBetterAuthPlugin(services.db))
   .use(makeWsApp(services))
   .get("/healthz", () => ({ ok: true }))
