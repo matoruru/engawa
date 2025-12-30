@@ -18,5 +18,7 @@ export type ListByConversationParams = {
 
 // 読み取り専用
 export interface MessageQueryRepository {
-  listByConversation(params: ListByConversationParams): Promise<readonly Message[]>;
+  listByConversation(
+    params: ListByConversationParams,
+  ): Promise<readonly Message[]>;
 }

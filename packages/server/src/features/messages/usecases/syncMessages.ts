@@ -6,7 +6,10 @@ import {
 } from "@/shared/ids";
 import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { Message } from "../domain";
-import type { ListByConversationParams, MessageQueryRepository } from "../ports";
+import type {
+  ListByConversationParams,
+  MessageQueryRepository,
+} from "../ports";
 
 export const SyncMessagesInputSchema = z.object({
   conversationId: ConversationIdSchema,

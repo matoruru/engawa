@@ -16,15 +16,20 @@
   "linter": {
     "enabled": true,
     "rules": {
-			"suspicious": {
-				"noExplicitAny": "error"
-			},
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
       "recommended": true
     }
   },
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "assist": {

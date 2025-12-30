@@ -250,9 +250,19 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     });
 
     // NOTE: テストではBetterAuth を使わないので noop
-    const resolveAppUserIdFromBetterAuthUserId = async (_authUserId: string) => { /** noop */ return null; };
+    const resolveAppUserIdFromBetterAuthUserId = async (
+      _authUserId: string,
+    ) => {
+      /** noop */ return null;
+    };
 
-    const svc = { db, resolveAppUserIdFromBetterAuthUserId, sendMessage, syncMessages, updateReadCursor };
+    const svc = {
+      db,
+      resolveAppUserIdFromBetterAuthUserId,
+      sendMessage,
+      syncMessages,
+      updateReadCursor,
+    };
 
     // @ts-expect-error Elysiaの型が複雑なので無視する
     app = new Elysia()
