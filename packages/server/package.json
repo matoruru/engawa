@@ -30,7 +30,6 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.10",
     "@types/pg": "^8.16.0",
     "@types/ws": "^8.18.1",
     "bun-types": "latest",
