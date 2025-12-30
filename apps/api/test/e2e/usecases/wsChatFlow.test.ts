@@ -29,6 +29,11 @@ import {
 } from "../../../src/app/wsTypes";
 
 import { makePostgresConversationMembersRepo } from "../../../src/features/conversations/infra/postgres/conversationMembersRepo";
+import { makePostgresConversationRepo } from "../../../src/features/conversations/infra/postgres/conversationRepo";
+import { makeCreateConversation } from "../../../src/features/conversations/usecases/createConversation";
+import { makeListConversations } from "../../../src/features/conversations/usecases/listConversations";
+import { makeAddMemberToConversation } from "../../../src/features/conversations/usecases/addMemberToConversation";
+import { makeListConversationMembers } from "../../../src/features/conversations/usecases/listConversationMembers";
 import { MessageTextSchema } from "../../../src/features/messages/domain";
 import { makePostgresMessageQueryRepo } from "../../../src/features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresMessageRepo } from "../../../src/features/messages/infra/postgres/messageRepo";
@@ -36,6 +41,8 @@ import { makeSendMessage } from "../../../src/features/messages/usecases/sendMes
 import { makeSyncMessages } from "../../../src/features/messages/usecases/syncMessages";
 import { makePostgresConversationReadsRepo } from "../../../src/features/reads/infra/postgres/conversationReadsRepo";
 import { makeUpdateReadCursor } from "../../../src/features/reads/usecases/updateReadCursor";
+import { makePostgresUserRepo } from "../../../src/shared/infra/postgres/userRepo";
+import { uuidv7 } from "../../../src/shared/uuid";
 
 import {
   resetDb,
@@ -256,12 +263,41 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       /** noop */ return null;
     };
 
+    // テストでは使用しないが、AppServices型に必要なプロパティを追加
+    const conversationRepo = makePostgresConversationRepo(db);
+    const userRepo = makePostgresUserRepo(db);
+
+    const createConversation = makeCreateConversation({
+      conversationRepo,
+      membersRepo,
+      generateConversationId: () => ConversationIdSchema.parse(uuidv7()),
+      now: () => new Date(),
+    });
+
+    const listConversations = makeListConversations({
+      membersRepo,
+    });
+
+    const addMemberToConversation = makeAddMemberToConversation({
+      membersRepo,
+    });
+
+    const listConversationMembers = makeListConversationMembers({
+      userRepo,
+      membersRepo,
+    });
+
     const svc = {
       db,
+      membersRepo,
       resolveAppUserIdFromBetterAuthUserId,
       sendMessage,
       syncMessages,
       updateReadCursor,
+      createConversation,
+      listConversations,
+      addMemberToConversation,
+      listConversationMembers,
     };
 
     // @ts-expect-error Elysiaの型が複雑なので無視する
