@@ -6,5 +6,5 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function isDevRuntime() {
-  return import.meta.env.NODE_ENV === "development";
+  return import.meta.env.DEV;
 }

@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useAuth } from "../hooks/useAuth";
+import { isDevRuntime } from "../lib/utils";
 import { Chrome } from "lucide-react";
 
 interface LoginProps {
@@ -84,16 +85,18 @@ export function Login({ apiUrl, onLoginSuccess }: LoginProps) {
             Googleで{isSignUp ? "登録" : "ログイン"}
           </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">または</span>
-            </div>
-          </div>
+          {isDevRuntime() && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">または</span>
+                </div>
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">
@@ -170,6 +173,8 @@ export function Login({ apiUrl, onLoginSuccess }: LoginProps) {
                 : "アカウントをお持ちでないですか？登録"}
             </button>
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
