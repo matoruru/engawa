@@ -1,6 +1,6 @@
 import * as z from "zod";
 import type { UserId } from "@/shared/ids";
-import { ConversationIdSchema, MessageIdSchema } from "@/shared/ids";
+import { ConversationIdSchema, MessageIdSchema, UserIdSchema } from "@/shared/ids";
 import { MessageTextSchema } from "../features/messages/domain";
 import { uuidv7 } from "@/shared/uuid";
 
@@ -72,5 +72,85 @@ export const makeHttpHandlers = (svc: AppServices) => ({
 
   getCurrentUser: async (userId: UserId) => {
     return { userId };
+  },
+
+  searchUsers: async (userId: UserId, query: string) => {
+    if (!query || query.trim().length === 0) {
+      return { users: [] };
+    }
+
+    const searchTerm = `%${query.trim()}%`;
+    const rows = await svc.db`
+      SELECT id, username, display_name
+      FROM users
+      WHERE (username ILIKE ${searchTerm} OR display_name ILIKE ${searchTerm})
+        AND id != ${userId}
+      ORDER BY display_name ASC, username ASC
+      LIMIT 20
+    `;
+
+    return {
+      users: rows.map((row) => ({
+        id: String(row.id),
+        username: String(row.username),
+        displayName: String(row.display_name),
+      })),
+    };
+  },
+
+  addMemberToConversation: async (
+    userId: UserId,
+    conversationId: ConversationId,
+    targetUserId: UserId,
+  ) => {
+    // 自分がメンバーかチェック
+    const isMember = await svc.membersRepo.isMember(conversationId, userId);
+    if (!isMember) {
+      return { success: false, error: "NOT_A_MEMBER" };
+    }
+
+    // 既にメンバーかチェック
+    const alreadyMember = await svc.membersRepo.isMember(
+      conversationId,
+      targetUserId,
+    );
+    if (alreadyMember) {
+      return { success: false, error: "ALREADY_MEMBER" };
+    }
+
+    // メンバーを追加
+    await svc.membersRepo.addMember(conversationId, targetUserId);
+
+    return { success: true };
+  },
+
+  listConversationMembers: async (
+    userId: UserId,
+    conversationId: ConversationId,
+  ) => {
+    // 自分がメンバーかチェック
+    const isMember = await svc.membersRepo.isMember(conversationId, userId);
+    if (!isMember) {
+      return { success: false, error: "NOT_A_MEMBER" };
+    }
+
+    const memberIds = await svc.membersRepo.listByConversationId(conversationId);
+
+    // ユーザー情報を取得
+    const rows = await svc.db`
+      SELECT id, username, display_name
+      FROM users
+      WHERE id = ANY(${memberIds})
+      ORDER BY display_name ASC, username ASC
+    `;
+
+    return {
+      success: true,
+      members: rows.map((row) => ({
+        id: String(row.id),
+        username: String(row.username),
+        displayName: String(row.display_name),
+      })),
+    };
   },
 });

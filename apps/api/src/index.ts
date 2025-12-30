@@ -49,6 +49,45 @@ const app = new Elysia()
     ({ userId }) => handlers.getCurrentUser(userId),
     { auth: true },
   )
+  .get(
+    "/users/search",
+    ({ query, userId }) => handlers.searchUsers(userId, query.q || ""),
+    {
+      auth: true,
+      query: t.Object({
+        q: t.Optional(t.String()),
+      }),
+    },
+  )
+  .get(
+    "/conversations/:conversationId/members",
+    ({ params, userId }) =>
+      handlers.listConversationMembers(userId, params.conversationId),
+    {
+      auth: true,
+      params: t.Object({
+        conversationId: t.String(),
+      }),
+    },
+  )
+  .post(
+    "/conversations/:conversationId/members",
+    ({ params, body, userId }) =>
+      handlers.addMemberToConversation(
+        userId,
+        params.conversationId,
+        body.userId,
+      ),
+    {
+      auth: true,
+      params: t.Object({
+        conversationId: t.String(),
+      }),
+      body: t.Object({
+        userId: t.String(),
+      }),
+    },
+  )
 
   const isProd = env.NODE_ENV === "production" || env.NODE_ENV === undefined;
   if (!isProd) {

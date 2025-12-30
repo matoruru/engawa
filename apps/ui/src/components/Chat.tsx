@@ -4,9 +4,10 @@ import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
+import { InviteUserDialog } from "./InviteUserDialog";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { v7 as uuidv7 } from "uuid";
 
@@ -50,6 +51,7 @@ export function Chat({
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -230,18 +232,28 @@ export function Chat({
     <div className="flex h-screen flex-col bg-background">
       {/* ヘッダー */}
       <div className="border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <Button
-              onClick={onBack}
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          )}
-          <h1 className="text-lg font-semibold">チャット</h1>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <Button
+                onClick={onBack}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <h1 className="text-lg font-semibold">チャット</h1>
+          </div>
+          <Button
+            onClick={() => setShowInviteDialog(true)}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -337,6 +349,19 @@ export function Chat({
           </p>
         )}
       </div>
+
+      {/* 招待ダイアログ */}
+      {showInviteDialog && (
+        <InviteUserDialog
+          conversationId={conversationId}
+          apiUrl={apiUrl}
+          currentUserId={currentUserId}
+          onClose={() => setShowInviteDialog(false)}
+          onInviteSuccess={() => {
+            // 招待成功時の処理（必要に応じて）
+          }}
+        />
+      )}
     </div>
   );
 }
