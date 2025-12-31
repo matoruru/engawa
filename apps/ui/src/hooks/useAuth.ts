@@ -48,7 +48,13 @@ export function useAuth(apiUrl: string) {
     try {
       const session = await authClient.getSession();
       if (session?.data?.user) {
-        setUser(session.data.user);
+        const user = session.data.user;
+        setUser({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image ?? undefined,
+        });
         await fetchAppUserId();
       } else {
         setUser(null);
@@ -80,7 +86,13 @@ export function useAuth(apiUrl: string) {
       }
 
       if (result.data?.user) {
-        setUser(result.data.user);
+        const user = result.data.user;
+        setUser({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image ?? undefined,
+        });
         await fetchAppUserId();
         return { success: true };
       }
@@ -105,7 +117,13 @@ export function useAuth(apiUrl: string) {
       }
 
       if (result.data?.user) {
-        setUser(result.data.user);
+        const user = result.data.user;
+        setUser({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image ?? undefined,
+        });
         await fetchAppUserId();
         return { success: true };
       }

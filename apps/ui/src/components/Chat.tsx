@@ -64,7 +64,6 @@ export function Chat({
     displayName: string;
     avatarUrl: string | null;
   }>>([]);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<Map<string, number>>(new Map());
 
@@ -561,8 +560,8 @@ export function Chat({
       </div>
 
       {/* メッセージリスト */}
-      <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
-        <div className="py-4 space-y-4 min-h-full">
+      <ScrollArea className="flex-1 px-4">
+        <div className="py-4 space-y-4">
           {isLoading ? (
             <div className="flex justify-center py-8">
               <p className="text-muted-foreground">読み込み中...</p>
@@ -581,8 +580,8 @@ export function Chat({
                 <div
                   key={message.messageId}
                   className={cn(
-                    "flex gap-3 w-full",
-                    isOwn ? "flex-row-reverse justify-end" : "flex-row justify-start"
+                    "flex gap-3",
+                    isOwn ? "justify-end" : "justify-start"
                   )}
                 >
                   {!isOwn && (
@@ -602,9 +601,8 @@ export function Chat({
                   )}
                   <div
                     className={cn(
-                      "flex flex-col gap-1",
-                      isOwn ? "items-end" : "items-start",
-                      "max-w-[80%] sm:max-w-[70%]"
+                      "flex flex-col gap-1 max-w-[80%] sm:max-w-[70%]",
+                      isOwn ? "items-end" : "items-start"
                     )}
                   >
                     <div
@@ -623,9 +621,6 @@ export function Chat({
                       {formatTime(message.createdAt)}
                     </span>
                   </div>
-                  {isOwn && (
-                    <div className="shrink-0 w-8" />
-                  )}
                 </div>
               );
             })
