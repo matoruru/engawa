@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "kaiwa",
+      "name": "idobata",
       "dependencies": {
         "better-auth": "^1.4.9",
         "elysia": "^1.4.19",

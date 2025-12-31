@@ -5,7 +5,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { UserMinus, Users, Link2, Copy, Check } from "lucide-react";
 import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@kaiwa/contracts";
+import type { App as AppContract } from "@idobata/contracts";
 import { useLocation } from "../hooks/useLocation";
 
 interface Friend {

@@ -8,7 +8,7 @@ import { AcceptInvite } from "./components/AcceptInvite";
 import { useAuth } from "./hooks/useAuth";
 import { ConversationsProvider, useConversations } from "./contexts/ConversationsContext";
 import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@kaiwa/contracts";
+import type { App as AppContract } from "@idobata/contracts";
 import { TabLayout } from "./components/TabLayout";
 
 type ConversationPreview = {
