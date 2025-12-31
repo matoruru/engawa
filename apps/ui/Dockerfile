@@ -31,7 +31,7 @@ ENV VITE_WS_URL=${VITE_WS_URL}
 ENV NODE_ENV=production
 
 # UI をビルド（dist を生成）
-RUN bun --cwd apps/ui run build
+RUN bun run --cwd apps/ui build
 
 ############################
 # 3) runtime: serve static

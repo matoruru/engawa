@@ -38,3 +38,4 @@ ENV NODE_ENV=production
 # アプリケーションを起動
 CMD ["bun", "run", "apps/api/src/index.ts"]
 
+

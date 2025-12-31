@@ -1,15 +1,26 @@
-import { useEffect, useMemo } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router";
-import { Chat } from "./components/Chat";
-import { Login } from "./components/Login";
-import { ConversationList } from "./components/ConversationList";
-import { Profile } from "./components/Profile";
-import { AcceptInvite } from "./components/AcceptInvite";
-import { useAuth } from "./hooks/useAuth";
-import { ConversationsProvider, useConversations } from "./contexts/ConversationsContext";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
+import { useEffect, useMemo } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from "react-router";
+import { AcceptInvite } from "./components/AcceptInvite";
+import { Chat } from "./components/Chat";
+import { ConversationList } from "./components/ConversationList";
+import { Login } from "./components/Login";
+import { Profile } from "./components/Profile";
 import { TabLayout } from "./components/TabLayout";
+import { constants } from "./constants";
+import {
+  ConversationsProvider,
+  useConversations,
+} from "./contexts/ConversationsContext";
+import { useAuth } from "./hooks/useAuth";
 
 type ConversationPreview = {
   conversationId: string;
@@ -24,8 +35,9 @@ type ConversationPreview = {
 };
 
 function AppContent() {
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-  const { user, appUserId, isLoading, refreshSession, signOut } = useAuth(apiUrl);
+  const apiUrl = constants.API_URL;
+  const { user, appUserId, isLoading, refreshSession, signOut } =
+    useAuth(apiUrl);
   const { setConversations, updateUnreadCount } = useConversations();
   const navigate = useNavigate();
 
@@ -36,7 +48,7 @@ function AppContent() {
           credentials: "include",
         },
       }),
-    [apiUrl]
+    [apiUrl],
   );
 
   // Googleログイン後のリダイレクト処理
@@ -58,14 +70,19 @@ function AppContent() {
         const response = await app.conversations.get();
 
         if (response.data && "conversations" in response.data) {
-          const conversationList: ConversationPreview[] = Array.from(response.data.conversations).map((c) => ({
+          const conversationList: ConversationPreview[] = Array.from(
+            response.data.conversations,
+          ).map((c) => ({
             conversationId: String(c.conversationId),
             title: c.title === null ? null : String(c.title),
             latestMessages: Array.from(c.latestMessages || []).map((m) => ({
               messageText: String(m.messageText),
               senderId: String(m.senderId),
               senderDisplayName: String(m.senderDisplayName),
-              createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : String(m.createdAt),
+              createdAt:
+                m.createdAt instanceof Date
+                  ? m.createdAt.toISOString()
+                  : String(m.createdAt),
             })),
             unreadCount: typeof c.unreadCount === "number" ? c.unreadCount : 0,
           }));
@@ -114,50 +131,48 @@ function AppContent() {
   }
 
   return (
-    <>
-      <Routes>
-        <Route
-          path="/invites/:token"
-          element={<AcceptInvite apiUrl={apiUrl} />}
-        />
-        <Route
-          path="/"
-          element={
-            <TabLayout>
-              <ConversationList
-                currentUserId={appUserId || ""}
-                onCreateConversation={handleCreateConversation}
-              />
-            </TabLayout>
-          }
-        />
-        <Route
-          path="/conversations/:conversationId"
-          element={
-            <ConversationChat
-              apiUrl={apiUrl}
+    <Routes>
+      <Route
+        path="/invites/:token"
+        element={<AcceptInvite apiUrl={apiUrl} />}
+      />
+      <Route
+        path="/"
+        element={
+          <TabLayout>
+            <ConversationList
               currentUserId={appUserId || ""}
-              onBack={() => navigate("/")}
-              updateUnreadCount={updateUnreadCount}
+              onCreateConversation={handleCreateConversation}
             />
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <TabLayout>
-              <Profile
-                user={user}
-                onBack={() => navigate("/")}
-                onSignOut={handleSignOut}
-                apiUrl={apiUrl}
-              />
-            </TabLayout>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+          </TabLayout>
+        }
+      />
+      <Route
+        path="/conversations/:conversationId"
+        element={
+          <ConversationChat
+            apiUrl={apiUrl}
+            currentUserId={appUserId || ""}
+            onBack={() => navigate("/")}
+            updateUnreadCount={updateUnreadCount}
+          />
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <TabLayout>
+            <Profile
+              user={user}
+              onBack={() => navigate("/")}
+              onSignOut={handleSignOut}
+              apiUrl={apiUrl}
+            />
+          </TabLayout>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
@@ -173,7 +188,7 @@ function ConversationChat({
   updateUnreadCount: (conversationId: string, unreadCount: number) => void;
 }) {
   const { conversationId } = useParams<{ conversationId: string }>();
-  
+
   if (!conversationId) {
     return null;
   }
@@ -184,7 +199,7 @@ function ConversationChat({
         conversationId={conversationId}
         currentUserId={currentUserId}
         apiUrl={apiUrl}
-        wsUrl={import.meta.env.VITE_WS_URL}
+        wsUrl={constants.WS_URL}
         onBack={onBack}
         updateUnreadCount={updateUnreadCount}
       />

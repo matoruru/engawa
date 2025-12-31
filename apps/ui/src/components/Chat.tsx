@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
-import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
-import { Send, ArrowLeft, UserPlus, LogOut, Pencil } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, LogOut, Pencil, Send, UserPlus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { v7 as uuidv7 } from "uuid";
+import { cn } from "@/lib/utils";
+import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
+import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Button } from "./ui/button";
+import { ScrollArea } from "./ui/scroll-area";
+import { Textarea } from "./ui/textarea";
+
+console.log("funnyfunny")
 
 // APIのMessage型からWsMessage型への変換
 function convertApiMessageToWsMessage(message: {
@@ -35,8 +37,8 @@ function convertApiMessageToWsMessage(message: {
 interface ChatProps {
   conversationId: string;
   currentUserId: string;
-  apiUrl?: string;
-  wsUrl?: string;
+  apiUrl: string;
+  wsUrl: string;
   onBack?: () => void;
   updateUnreadCount?: (conversationId: string, unreadCount: number) => void;
 }
@@ -44,7 +46,7 @@ interface ChatProps {
 export function Chat({
   conversationId,
   currentUserId,
-  apiUrl = "http://localhost:3000",
+  apiUrl,
   wsUrl,
   onBack,
   updateUnreadCount,
@@ -55,17 +57,23 @@ export function Chat({
   const [isLoading, setIsLoading] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
-  const [conversationTitle, setConversationTitle] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState<string | null>(
+    null,
+  );
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-  const [memberAvatars, setMemberAvatars] = useState<Map<string, { displayName: string; avatarUrl: string | null }>>(new Map());
-  const [members, setMembers] = useState<Array<{
-    id: string;
-    username: string;
-    displayName: string;
-    avatarUrl: string | null;
-  }>>([]);
+  const [memberAvatars, setMemberAvatars] = useState<
+    Map<string, { displayName: string; avatarUrl: string | null }>
+  >(new Map());
+  const [members, setMembers] = useState<
+    Array<{
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl: string | null;
+    }>
+  >([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<Map<string, number>>(new Map());
 
@@ -76,11 +84,9 @@ export function Chat({
           credentials: "include",
         },
       }),
-    [apiUrl]
+    [apiUrl],
   );
-  const ws = useWebSocket(
-    wsUrl || apiUrl.replace(/^http/, "ws") + "/ws"
-  );
+  const ws = useWebSocket(wsUrl);
 
   // メッセージをスクロール位置の最下部に表示
   const scrollToBottom = () => {
@@ -97,7 +103,9 @@ export function Chat({
       try {
         const response = await app.conversations({ conversationId }).get();
         if (response.data && "conversationId" in response.data) {
-          setConversationTitle(response.data.title || `会話 ${conversationId.slice(0, 8)}`);
+          setConversationTitle(
+            response.data.title || `会話 ${conversationId.slice(0, 8)}`,
+          );
         } else {
           setConversationTitle(`会話 ${conversationId.slice(0, 8)}`);
         }
@@ -113,7 +121,9 @@ export function Chat({
   useEffect(() => {
     const loadMembers = async () => {
       try {
-        const response = await app.conversations({ conversationId }).members.get();
+        const response = await app
+          .conversations({ conversationId })
+          .members.get();
         if (response.data && "members" in response.data) {
           const members = response.data.members as Array<{
             id: string;
@@ -121,7 +131,10 @@ export function Chat({
             displayName: string;
             avatarUrl: string | null;
           }>;
-          const avatarMap = new Map<string, { displayName: string; avatarUrl: string | null }>();
+          const avatarMap = new Map<
+            string,
+            { displayName: string; avatarUrl: string | null }
+          >();
           members.forEach((member) => {
             avatarMap.set(member.id, {
               displayName: member.displayName,
@@ -148,11 +161,17 @@ export function Chat({
           limit: 50,
         });
 
-        if (response.data && "messages" in response.data && response.data.kind === "ok") {
+        if (
+          response.data &&
+          "messages" in response.data &&
+          response.data.kind === "ok"
+        ) {
           const apiMessages = response.data.messages;
-          const wsMessages: WsMessage[] = Array.from(apiMessages).map(convertApiMessageToWsMessage);
+          const wsMessages: WsMessage[] = Array.from(apiMessages).map(
+            convertApiMessageToWsMessage,
+          );
           setMessages(wsMessages);
-          
+
           // メッセージを読み込んだら、最新のメッセージIDでread cursorを更新
           if (wsMessages.length > 0) {
             const latestMessage = wsMessages[wsMessages.length - 1];
@@ -192,7 +211,7 @@ export function Chat({
 
         // clientMessageIdで重複チェック（楽観的更新のメッセージを置き換え）
         const existingIndex = prev.findIndex(
-          (m) => m.clientMessageId === event.payload.clientMessageId
+          (m) => m.clientMessageId === event.payload.clientMessageId,
         );
 
         if (existingIndex >= 0) {
@@ -256,12 +275,16 @@ export function Chat({
         setMessages((prev) => {
           // clientMessageIdで楽観的更新のメッセージを探す
           const optimisticIndex = prev.findIndex(
-            (m) => m.clientMessageId === clientMessageId && m.messageId.startsWith("temp-")
+            (m) =>
+              m.clientMessageId === clientMessageId &&
+              m.messageId.startsWith("temp-"),
           );
           if (optimisticIndex >= 0) {
             // 実際のメッセージがまだ来ていない場合のみ削除
             const hasRealMessage = prev.some(
-              (m) => m.clientMessageId === clientMessageId && !m.messageId.startsWith("temp-")
+              (m) =>
+                m.clientMessageId === clientMessageId &&
+                !m.messageId.startsWith("temp-"),
             );
             if (!hasRealMessage) {
               return prev.filter((_, index) => index !== optimisticIndex);
@@ -274,7 +297,7 @@ export function Chat({
       console.error("Failed to send message:", error);
       // エラー時は楽観的更新を削除
       setMessages((prev) =>
-        prev.filter((m) => m.messageId !== `temp-${clientMessageId}`)
+        prev.filter((m) => m.messageId !== `temp-${clientMessageId}`),
       );
     } finally {
       setIsSending(false);
@@ -374,7 +397,10 @@ export function Chat({
     if (!ws.isConnected) return;
 
     const unsubscribeTypingStarted = ws.on("typing.started", (event) => {
-      if (event.payload.conversationId === conversationId && event.payload.userId !== currentUserId) {
+      if (
+        event.payload.conversationId === conversationId &&
+        event.payload.userId !== currentUserId
+      ) {
         setTypingUsers((prev) => new Set(prev).add(event.payload.userId));
         // 3秒後に自動的にタイピング停止
         const timeoutId = window.setTimeout(() => {
@@ -384,7 +410,9 @@ export function Chat({
             return next;
           });
         }, 3000);
-        const existingTimeout = typingTimeoutRef.current.get(event.payload.userId);
+        const existingTimeout = typingTimeoutRef.current.get(
+          event.payload.userId,
+        );
         if (existingTimeout) {
           clearTimeout(existingTimeout);
         }
@@ -393,7 +421,10 @@ export function Chat({
     });
 
     const unsubscribeTypingStopped = ws.on("typing.stopped", (event) => {
-      if (event.payload.conversationId === conversationId && event.payload.userId !== currentUserId) {
+      if (
+        event.payload.conversationId === conversationId &&
+        event.payload.userId !== currentUserId
+      ) {
         setTypingUsers((prev) => {
           const next = new Set(prev);
           next.delete(event.payload.userId);
@@ -419,10 +450,13 @@ export function Chat({
 
     try {
       setIsLeaving(true);
-      const response = await fetch(`${apiUrl}/conversations/${conversationId}/members`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${apiUrl}/conversations/${conversationId}/members`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -447,17 +481,22 @@ export function Chat({
 
   const handleSaveTitle = async () => {
     try {
-      const response = await fetch(`${apiUrl}/conversations/${conversationId}/title`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ title: titleInput || null }),
-      });
+      const response = await fetch(
+        `${apiUrl}/conversations/${conversationId}/title`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ title: titleInput || null }),
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setConversationTitle(titleInput || `会話 ${conversationId.slice(0, 8)}`);
+          setConversationTitle(
+            titleInput || `会話 ${conversationId.slice(0, 8)}`,
+          );
           setIsEditingTitle(false);
         }
       }
@@ -482,7 +521,10 @@ export function Chat({
                 >
                   <Avatar className="h-6 w-6">
                     {member.avatarUrl ? (
-                      <AvatarImage src={member.avatarUrl} alt={member.displayName} />
+                      <AvatarImage
+                        src={member.avatarUrl}
+                        alt={member.displayName}
+                      />
                     ) : null}
                     <AvatarFallback className="text-xs">
                       {getInitials(member.displayName)}
@@ -498,81 +540,83 @@ export function Chat({
         </div>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {onBack && (
+            <div className="flex items-center gap-3">
+              {onBack && (
+                <Button
+                  onClick={onBack}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={titleInput}
+                    onChange={(e) => setTitleInput(e.target.value)}
+                    onBlur={handleSaveTitle}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveTitle();
+                      } else if (e.key === "Escape") {
+                        setIsEditingTitle(false);
+                        setTitleInput(conversationTitle || "");
+                      }
+                    }}
+                    className="text-lg font-semibold bg-transparent border-b border-primary focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <h1
+                  className="text-lg font-semibold cursor-pointer hover:text-primary flex items-center gap-2"
+                  onClick={() => {
+                    setTitleInput(conversationTitle || "");
+                    setIsEditingTitle(true);
+                  }}
+                >
+                  <span>
+                    {conversationTitle || `会話 ${conversationId.slice(0, 8)}`}
+                  </span>
+                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                </h1>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "text-xs px-2 py-1 rounded-full border shrink-0",
+                  ws.isConnected
+                    ? "text-muted-foreground border-border bg-muted/30"
+                    : "text-amber-700 border-amber-200 bg-amber-50",
+                )}
+                title={ws.isConnected ? "接続済み" : "接続中"}
+              >
+                {ws.isConnected ? "オンライン" : "接続中…"}
+              </div>
               <Button
-                onClick={onBack}
+                onClick={() => setShowInviteDialog(true)}
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 shrink-0"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <UserPlus className="h-4 w-4" />
               </Button>
-            )}
-            {isEditingTitle ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={titleInput}
-                  onChange={(e) => setTitleInput(e.target.value)}
-                  onBlur={handleSaveTitle}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSaveTitle();
-                    } else if (e.key === "Escape") {
-                      setIsEditingTitle(false);
-                      setTitleInput(conversationTitle || "");
-                    }
-                  }}
-                  className="text-lg font-semibold bg-transparent border-b border-primary focus:outline-none"
-                  autoFocus
-                />
-              </div>
-            ) : (
-              <h1 
-                className="text-lg font-semibold cursor-pointer hover:text-primary flex items-center gap-2"
-                onClick={() => {
-                  setTitleInput(conversationTitle || "");
-                  setIsEditingTitle(true);
-                }}
+              <Button
+                onClick={handleLeaveConversation}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                disabled={isLeaving}
+                title="会話から脱会"
               >
-                <span>{conversationTitle || `会話 ${conversationId.slice(0, 8)}`}</span>
-                <Pencil className="h-4 w-4 text-muted-foreground" />
-              </h1>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div
-              className={cn(
-                "text-xs px-2 py-1 rounded-full border shrink-0",
-                ws.isConnected
-                  ? "text-muted-foreground border-border bg-muted/30"
-                  : "text-amber-700 border-amber-200 bg-amber-50"
-              )}
-              title={ws.isConnected ? "接続済み" : "接続中"}
-            >
-              {ws.isConnected ? "オンライン" : "接続中…"}
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              onClick={() => setShowInviteDialog(true)}
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-            >
-              <UserPlus className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={handleLeaveConversation}
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              disabled={isLeaving}
-              title="会話から脱会"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
         </div>
       </div>
 
@@ -592,20 +636,23 @@ export function Chat({
               const isOwn = message.senderId === currentUserId;
               const member = memberAvatars.get(message.senderId);
               const displayName = member?.displayName || message.senderId;
-              
+
               return (
                 <div
                   key={message.messageId}
                   className={cn(
                     "flex gap-3",
-                    isOwn ? "justify-end" : "justify-start"
+                    isOwn ? "justify-end" : "justify-start",
                   )}
                 >
                   {!isOwn && (
                     <div className="flex flex-col items-center gap-1 shrink-0">
                       <Avatar className="h-8 w-8">
                         {member?.avatarUrl ? (
-                          <AvatarImage src={member.avatarUrl} alt={displayName} />
+                          <AvatarImage
+                            src={member.avatarUrl}
+                            alt={displayName}
+                          />
                         ) : (
                           <AvatarFallback className="text-xs">
                             {getInitials(displayName)}
@@ -620,7 +667,7 @@ export function Chat({
                   <div
                     className={cn(
                       "flex flex-col gap-1 max-w-[80%] sm:max-w-[70%]",
-                      isOwn ? "items-end" : "items-start"
+                      isOwn ? "items-end" : "items-start",
                     )}
                   >
                     <div
@@ -628,7 +675,7 @@ export function Chat({
                         "rounded-2xl px-4 py-2 text-sm",
                         isOwn
                           ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "bg-muted text-foreground rounded-bl-sm"
+                          : "bg-muted text-foreground rounded-bl-sm",
                       )}
                     >
                       <p className="whitespace-pre-wrap break-words">
@@ -653,7 +700,9 @@ export function Chat({
         <div
           className={cn(
             "h-6 flex items-center gap-2 text-xs text-muted-foreground transition-opacity",
-            typingUsers.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"
+            typingUsers.size > 0
+              ? "opacity-100"
+              : "opacity-0 pointer-events-none",
           )}
         >
           <div className="flex gap-1">
@@ -678,12 +727,12 @@ export function Chat({
           </span>
         </div>
         <div className="flex gap-2 items-end">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onCompositionStart={handleCompositionStart}
-              onCompositionEnd={handleCompositionEnd}
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             placeholder="メッセージを入力..."
             className="min-h-[60px] max-h-[120px] resize-none text-base"
             rows={1}
@@ -713,4 +762,3 @@ export function Chat({
     </div>
   );
 }
-
