@@ -1,44 +1,65 @@
-# UI Dockerfile
-# Vite + Reactアプリケーションをビルドし、Viteのpreviewサーバーで配信
+############################
+# 1) deps: install packages
+############################
+FROM oven/bun:latest AS deps
+WORKDIR /repo
 
-# ビルドステージ
-FROM oven/bun:1 AS builder
+COPY apps/ui/package.json apps/ui/package.json
+COPY apps/api/package.json apps/api/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+COPY package.json package.json
+COPY bun.lock* bun.lock*
 
-WORKDIR /app
-
-# ワークスペースのルートからすべてのファイルをコピー
-COPY . .
-
-# 依存関係をインストール
+# インストール
 RUN bun install --frozen-lockfile
 
-# ソースコードをコピー
-COPY apps/ui ./apps/ui
-COPY packages/contracts ./packages/contracts
+############################
+# 2) build: build ui (vite)
+############################
+FROM deps AS build
+WORKDIR /repo
 
-# # UIをビルド
-# WORKDIR /app/apps/ui
-# RUN bun run build
+# 残りのソースをコピー
+COPY apps apps
+COPY packages packages
 
-# 本番用ステージ（Vite previewサーバー）
-FROM oven/bun:1-slim
-
-WORKDIR /app
-
-# ビルドステージから必要なファイルをコピー
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/ui ./apps/ui
-COPY --from=builder /app/packages/contracts ./packages/contracts
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/bun.lock* ./
-
-# ポートを公開（Vite previewのデフォルトポート）
-EXPOSE 4173
-
-# 環境変数のデフォルト値
+# Vite の env はビルド時に埋め込まれるので ARG で受ける
+ARG VITE_API_URL
+ARG VITE_WS_URL
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_WS_URL=${VITE_WS_URL}
 ENV NODE_ENV=production
 
-# Vite previewサーバーを起動
-WORKDIR /app/apps/ui
-CMD ["bun", "run", "preview", "--host", "0.0.0.0"]
+# UI をビルド（dist を生成）
+RUN bun --cwd apps/ui run build
 
+############################
+# 3) runtime: serve static
+############################
+FROM nginx:alpine AS runtime
+
+# SPA (React Router) 用に、存在しないパスは index.html にフォールバック
+RUN cat > /etc/nginx/conf.d/default.conf <<'NGINX'
+server {
+  listen 8080;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # 静的ファイルはそのまま
+  location /assets/ {
+    try_files $uri =404;
+  }
+
+  # SPA ルーティング（/profile 等）対策
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}
+NGINX
+
+COPY --from=build /repo/apps/ui/dist /usr/share/nginx/html
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]
