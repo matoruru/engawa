@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { createBetterAuthClient } from "../lib/authClient";
 import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@kaiwa/contracts";
+import type { App as AppContract } from "@idobata/contracts";
 
 interface User {
   id: string;

@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
 import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@kaiwa/contracts";
+import type { App as AppContract } from "@idobata/contracts";
 import { Send, ArrowLeft, UserPlus, LogOut, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { v7 as uuidv7 } from "uuid";

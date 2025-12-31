@@ -7,7 +7,7 @@ import { LogOut, User, Pencil, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FriendsList } from "./FriendsList";
 import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@kaiwa/contracts";
+import type { App as AppContract } from "@idobata/contracts";
 
 interface User {
   id: string;

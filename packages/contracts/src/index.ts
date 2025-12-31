@@ -1,1 +1,1 @@
-export type { App } from "@kaiwa/api";
+export type { App } from "@idobata/api";

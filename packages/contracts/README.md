@@ -1,4 +1,4 @@
-# kaiwa-contracts
+# idobata-contracts
 
 Eden TreatyでAPIのクライアントを公開するパッケージ。
 

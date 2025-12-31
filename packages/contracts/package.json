@@ -1,5 +1,5 @@
 {
-  "name": "@kaiwa/contracts",
+  "name": "@idobata/contracts",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@kaiwa/api": "workspace:*"
+    "@idobata/api": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"
