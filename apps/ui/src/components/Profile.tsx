@@ -1,6 +1,6 @@
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
-import { Check, LogOut, Pencil, User, X } from "lucide-react";
+import { Check, LogOut, Pencil, User as UserIcon, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { FriendsList } from "./FriendsList";
@@ -215,7 +215,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                 {/* ユーザー情報 */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-muted-foreground" />
+                    <UserIcon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
                       <p className="text-sm font-medium mb-1">表示名</p>
                       {isEditingDisplayName ? (
@@ -301,7 +301,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-muted-foreground" />
+                    <UserIcon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
                       <p className="text-sm font-medium mb-1">ユーザーID</p>
                       {isEditingUsername ? (
@@ -391,7 +391,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-muted-foreground" />
+                    <UserIcon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">メールアドレス</p>
                       <p className="text-sm text-muted-foreground">
