@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { createBetterAuthClient } from "../lib/authClient";
+import { treaty } from "@elysiajs/eden";
+import type { App as AppContract } from "@kaiwa/contracts";
 
 interface User {
   id: string;
@@ -13,6 +15,16 @@ export function useAuth(apiUrl: string) {
   const [appUserId, setAppUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const app = useMemo(
+    () =>
+      treaty<AppContract>(apiUrl, {
+        fetch: {
+          credentials: "include",
+        },
+      }),
+    [apiUrl]
+  );
+
   const authClient = useMemo(
     () => createBetterAuthClient(`${apiUrl}/api/auth`),
     [apiUrl]
@@ -20,14 +32,9 @@ export function useAuth(apiUrl: string) {
 
   const fetchAppUserId = async () => {
     try {
-      const meResponse = await fetch(`${apiUrl}/me`, {
-        method: "GET",
-        credentials: "include",
-      });
-
-      if (meResponse.ok) {
-        const meData = (await meResponse.json()) as { userId: string };
-        setAppUserId(meData.userId);
+      const meResponse = await app.me.get();
+      if (meResponse.data && "user" in meResponse.data) {
+        setAppUserId(meResponse.data.user.id);
       } else {
         setAppUserId(null);
       }
