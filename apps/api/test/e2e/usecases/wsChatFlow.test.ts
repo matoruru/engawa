@@ -292,6 +292,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       messageQueryRepo: queryRepo,
       conversationRepo,
       readsRepo,
+      userRepo,
     });
 
     const getConversation = makeGetConversation({

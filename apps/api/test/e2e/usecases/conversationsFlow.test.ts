@@ -71,11 +71,13 @@ describe("e2e/usecases: conversations flow", () => {
 
     const messageQueryRepo = makePostgresMessageQueryRepo(db);
     const readsRepo = makePostgresConversationReadsRepo(db);
+    const userRepo = makePostgresUserRepo(db);
     const listConversations = makeListConversations({
       membersRepo,
       messageQueryRepo,
       conversationRepo,
       readsRepo,
+      userRepo,
     });
 
     // 会話を作成

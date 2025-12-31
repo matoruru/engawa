@@ -10,11 +10,23 @@ import { useLocation } from "./hooks/useLocation";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
 
+type ConversationPreview = {
+  conversationId: string;
+  title: string | null;
+  latestMessages: Array<{
+    messageText: string;
+    senderId: string;
+    senderDisplayName: string;
+    createdAt: string;
+  }>;
+  unreadCount: number;
+};
+
 function App() {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const { user, appUserId, isLoading, refreshSession, signOut } = useAuth(apiUrl);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<Array<{ conversationId: string; title: string | null; latestMessages: Array<{ messageText: string; senderId: string; senderDisplayName: string; createdAt: string }>; unreadCount: number }>>([]);
+  const [conversations, setConversations] = useState<ConversationPreview[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -73,16 +85,16 @@ function App() {
         const response = await app.conversations.get();
 
         if (response.data && "conversations" in response.data) {
-          const conversationList = Array.from(response.data.conversations).map((c: any) => ({
-            conversationId: c.conversationId,
-            title: c.title,
-            latestMessages: Array.from(c.latestMessages || []).map((m: any) => ({
-              messageText: m.messageText,
-              senderId: m.senderId,
-              senderDisplayName: m.senderDisplayName,
-              createdAt: m.createdAt,
+          const conversationList: ConversationPreview[] = Array.from(response.data.conversations).map((c) => ({
+            conversationId: String(c.conversationId),
+            title: c.title === null ? null : String(c.title),
+            latestMessages: Array.from(c.latestMessages || []).map((m) => ({
+              messageText: String(m.messageText),
+              senderId: String(m.senderId),
+              senderDisplayName: String(m.senderDisplayName),
+              createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : String(m.createdAt),
             })),
-            unreadCount: c.unreadCount ?? 0,
+            unreadCount: typeof c.unreadCount === "number" ? c.unreadCount : 0,
           }));
           setConversations(conversationList);
           

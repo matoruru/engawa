@@ -12,6 +12,9 @@ import type { Message } from "../../messages/domain";
 import { makeListConversations } from "./listConversations";
 import { ConversationRepository } from "../ports";
 import type { ConversationReadsRepository } from "../../reads/ports";
+import type { ReadCursor } from "../../reads/domain";
+import type { UserRepository } from "@/shared/ports/users";
+import type { User } from "@/shared/ports/users";
 
 // --- Test doubles ---
 class InMemoryMembersRepo implements ConversationMembersRepository {
@@ -83,11 +86,55 @@ class InMemoryConversationRepo implements ConversationRepository {
 }
 
 class InMemoryReadsRepo implements ConversationReadsRepository {
-  async get(): Promise<any> {
+  async get(): Promise<ReadCursor | null> {
     return null;
   }
   async upsert(): Promise<void> {
     // noop
+  }
+}
+
+class InMemoryUserRepo implements UserRepository {
+  private readonly users = new Map<UserId, User>();
+
+  async findByIds(userIds: readonly UserId[]): Promise<readonly User[]> {
+    return userIds
+      .map((id) => this.users.get(id))
+      .filter((user): user is User => user !== undefined);
+  }
+
+  async findById(userId: UserId): Promise<User | null> {
+    return this.users.get(userId) || null;
+  }
+
+  async findByUsername(username: string): Promise<User | null> {
+    for (const user of this.users.values()) {
+      if (user.username === username) {
+        return user;
+      }
+    }
+    return null;
+  }
+
+  async updateDisplayName(userId: UserId, displayName: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      this.users.set(userId, { ...user, displayName });
+    }
+  }
+
+  async updateUsername(userId: UserId, username: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      this.users.set(userId, { ...user, username });
+    }
+  }
+
+  async updateAvatarUrl(userId: UserId, avatarUrl: string | null): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      this.users.set(userId, { ...user, avatarUrl });
+    }
   }
 }
 
@@ -102,8 +149,9 @@ describe("listConversations (feature/conversations)", () => {
     const messageQueryRepo = new InMemoryMessageQueryRepo();
     const conversationRepo = new InMemoryConversationRepo();
     const readsRepo = new InMemoryReadsRepo();
+    const userRepo = new InMemoryUserRepo();
 
-    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo, readsRepo });
+    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo, readsRepo, userRepo });
 
     const res = await listConversations({ userId: uid });
 
@@ -118,10 +166,11 @@ describe("listConversations (feature/conversations)", () => {
     const messageQueryRepo = new InMemoryMessageQueryRepo();
     const conversationRepo = new InMemoryConversationRepo();
     const readsRepo = new InMemoryReadsRepo();
+    const userRepo = new InMemoryUserRepo();
     await membersRepo.addMember(cid1, uid);
     await membersRepo.addMember(cid2, uid);
 
-    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo, readsRepo });
+    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo, readsRepo, userRepo });
 
     const res = await listConversations({ userId: uid });
 
