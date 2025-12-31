@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
+import type { ConversationId, MessageId } from "@/shared/ids";
 import type { Message } from "../../domain";
 import { MessageSchema } from "../../domain";
 import type {

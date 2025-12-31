@@ -210,6 +210,7 @@ export const composeApp = (): AppServices => {
       messageQueryRepo,
       conversationRepo,
       readsRepo,
+      userRepo,
     });
 
   const getConversation = makeGetConversation({

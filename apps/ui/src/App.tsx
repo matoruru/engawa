@@ -79,6 +79,7 @@ function App() {
             latestMessages: Array.from(c.latestMessages || []).map((m: any) => ({
               messageText: m.messageText,
               senderId: m.senderId,
+              senderDisplayName: m.senderDisplayName,
               createdAt: m.createdAt,
             })),
             unreadCount: c.unreadCount ?? 0,
