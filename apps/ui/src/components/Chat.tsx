@@ -637,27 +637,40 @@ export function Chat({
               );
             })
           )}
-          {typingUsers.size > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2">
-              <div className="flex gap-1">
-                <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {Array.from(typingUsers).map((userId) => {
-                  const member = memberAvatars.get(userId);
-                  return member?.displayName || userId;
-                }).join(", ")}がタイプ中...
-              </span>
-            </div>
-          )}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
       {/* 入力エリア */}
       <div className="border-t border-border bg-card p-4 safe-area-inset-bottom">
+        {/* タイピング表示（スクロール領域の外に固定） */}
+        <div
+          className={cn(
+            "h-6 flex items-center gap-2 text-xs text-muted-foreground transition-opacity",
+            typingUsers.size > 0 ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+        >
+          <div className="flex gap-1">
+            <div
+              className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            />
+            <div
+              className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            />
+            <div
+              className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            />
+          </div>
+          <span className="truncate">
+            {Array.from(typingUsers)
+              .map((userId) => memberAvatars.get(userId)?.displayName || userId)
+              .join(", ")}
+            がタイプ中...
+          </span>
+        </div>
         <div className="flex gap-2 items-end">
             <Textarea
               value={input}
