@@ -565,11 +565,10 @@ export function Chat({
                       }
                     }}
                     className="text-lg font-semibold bg-transparent border-b border-primary focus:outline-none"
-                    autoFocus
                   />
                 </div>
               ) : (
-                <h1
+                <button type="button"
                   className="text-lg font-semibold cursor-pointer hover:text-primary flex items-center gap-2"
                   onClick={() => {
                     setTitleInput(conversationTitle || "");
@@ -580,7 +579,7 @@ export function Chat({
                     {conversationTitle || `会話 ${conversationId.slice(0, 8)}`}
                   </span>
                   <Pencil className="h-4 w-4 text-muted-foreground" />
-                </h1>
+                </button>
               )}
             </div>
             <div className="flex items-center gap-2">
