@@ -56,6 +56,7 @@ export function ConversationList({
             <div className="space-y-1">
               {conversations.map((conversation) => (
                 <button
+                  type="button"
                   key={conversation.conversationId}
                   onClick={() => navigate(`/conversations/${conversation.conversationId}`)}
                   className={cn(
@@ -83,8 +84,8 @@ export function ConversationList({
                       </div>
                       {conversation.latestMessages.length > 0 ? (
                         <div className="space-y-0.5 mt-1">
-                          {conversation.latestMessages.slice(-2).map((message, idx) => (
-                            <p key={idx} className="text-xs text-muted-foreground truncate">
+                          {conversation.latestMessages.slice(-2).map((message) => (
+                            <p key={message.createdAt} className="text-xs text-muted-foreground truncate">
                               {message.senderId === currentUserId ? "あなた" : message.senderDisplayName}: {message.messageText}
                             </p>
                           ))}

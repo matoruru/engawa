@@ -85,6 +85,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
       <div className="border-b border-border bg-card">
         <div className="flex">
           <button
+            type="button"
             onClick={() => setActiveTab("profile")}
             className={cn(
               "flex-1 px-4 py-3 text-sm font-medium transition-colors",
@@ -96,6 +97,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
             プロフィール
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("friends")}
             className={cn(
               "flex-1 px-4 py-3 text-sm font-medium transition-colors",

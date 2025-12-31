@@ -17,6 +17,7 @@ export function BottomTabBar() {
     <div className="border-t border-border bg-card safe-area-inset-bottom">
       <div className="flex">
         <button
+          type="button"
           onClick={() => navigate("/")}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors relative",
@@ -32,6 +33,7 @@ export function BottomTabBar() {
           )}
         </button>
         <button
+          type="button"
           onClick={() => navigate("/profile")}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",

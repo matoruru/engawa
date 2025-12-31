@@ -11,8 +11,6 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
 
-console.log("funnyfunny")
-
 // APIのMessage型からWsMessage型への変換
 function convertApiMessageToWsMessage(message: {
   readonly [x: string]: unknown;
