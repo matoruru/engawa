@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { treaty } from "@elysiajs/eden";
+import type { App as AppContract } from "@idobata/contracts";
+import { Search, UserPlus, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { X, UserPlus, Search } from "lucide-react";
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@idobata/contracts";
 
 interface User {
   id: string;
@@ -42,7 +42,7 @@ export function InviteUserDialog({
           credentials: "include",
         },
       }),
-    [apiUrl]
+    [apiUrl],
   );
 
   // ユーザー検索関数（型安全な実装）
@@ -66,7 +66,9 @@ export function InviteUserDialog({
     const loadMembers = async () => {
       try {
         setIsLoadingMembers(true);
-        const response = await app.conversations({ conversationId }).members.get();
+        const response = await app
+          .conversations({ conversationId })
+          .members.get();
 
         if (response.data && "members" in response.data) {
           const membersData = response.data.members;
@@ -117,14 +119,18 @@ export function InviteUserDialog({
   const handleInvite = async (userId: string) => {
     try {
       setIsInviting(userId);
-      const response = await app.conversations({ conversationId }).members.post({
-        userId,
-      });
+      const response = await app
+        .conversations({ conversationId })
+        .members.post({
+          userId,
+        });
 
       if (response.data && "success" in response.data) {
         if (response.data.success) {
           // メンバー一覧を再取得
-          const membersResponse = await app.conversations({ conversationId }).members.get();
+          const membersResponse = await app
+            .conversations({ conversationId })
+            .members.get();
           if (membersResponse.data && "members" in membersResponse.data) {
             const membersData = membersResponse.data.members;
             if (Array.isArray(membersData)) {
@@ -135,7 +141,11 @@ export function InviteUserDialog({
           setSearchResults([]);
           onInviteSuccess();
         } else {
-          if (response.data && typeof response.data === "object" && "error" in response.data) {
+          if (
+            response.data &&
+            typeof response.data === "object" &&
+            "error" in response.data
+          ) {
             const error = response.data.error;
             console.error("Failed to invite user:", error);
           } else {
@@ -209,7 +219,9 @@ export function InviteUserDialog({
                     </p>
                   </div>
                   {member.id === currentUserId && (
-                    <span className="text-xs text-muted-foreground">あなた</span>
+                    <span className="text-xs text-muted-foreground">
+                      あなた
+                    </span>
                   )}
                 </div>
               ))}
@@ -280,4 +292,3 @@ export function InviteUserDialog({
     </div>
   );
 }
-

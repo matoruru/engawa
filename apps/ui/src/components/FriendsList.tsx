@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { treaty } from "@elysiajs/eden";
+import type { App as AppContract } from "@idobata/contracts";
+import { Check, Copy, Link2, UserMinus, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation } from "../hooks/useLocation";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { UserMinus, Users, Link2, Copy, Check } from "lucide-react";
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@idobata/contracts";
-import { useLocation } from "../hooks/useLocation";
 
 interface Friend {
   id: string;
@@ -59,12 +59,15 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
     loadFriends();
   }, []);
 
-
   const handleCreateInvite = async () => {
     try {
       setIsCreatingInvite(true);
       const response = await app.invites.post();
-      if (response.data && "token" in response.data && "inviteUrl" in response.data) {
+      if (
+        response.data &&
+        "token" in response.data &&
+        "inviteUrl" in response.data
+      ) {
         const baseUrl = location.getOrigin();
         const fullUrl = `${baseUrl}${response.data.inviteUrl}`;
         setInviteUrl(fullUrl);
@@ -90,7 +93,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
 
   const confirmRemoveFriend = async () => {
     if (!friendToRemove) return;
-    
+
     try {
       setIsAdding(friendToRemove.id);
       const response = await fetch(`${apiUrl}/friends/${friendToRemove.id}`, {
@@ -139,16 +142,8 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
               このリンクを招待したい友達に共有してください
             </p>
             <div className="flex items-center gap-2 rounded-lg border border-border bg-muted p-3">
-              <Input
-                value={inviteUrl}
-                readOnly
-                className="flex-1 text-sm"
-              />
-              <Button
-                onClick={handleCopyInviteUrl}
-                size="icon"
-                variant="ghost"
-              >
+              <Input value={inviteUrl} readOnly className="flex-1 text-sm" />
+              <Button onClick={handleCopyInviteUrl} size="icon" variant="ghost">
                 {copied ? (
                   <Check className="h-4 w-4 text-green-500" />
                 ) : (
@@ -163,7 +158,6 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
       {/* コンテンツ */}
       <ScrollArea className="flex-1">
         <div className="p-4">
-
           {/* 友達一覧 */}
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -196,7 +190,10 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         {friend.avatarUrl ? (
-                          <AvatarImage src={friend.avatarUrl} alt={friend.displayName} />
+                          <AvatarImage
+                            src={friend.avatarUrl}
+                            alt={friend.displayName}
+                          />
                         ) : (
                           <AvatarFallback>
                             {getInitials(friend.displayName)}
@@ -204,7 +201,9 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
                         )}
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium">{friend.displayName}</p>
+                        <p className="text-sm font-medium">
+                          {friend.displayName}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           @{friend.username}
                         </p>
@@ -224,7 +223,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
             )}
           </div>
         </div>
-        </ScrollArea>
+      </ScrollArea>
 
       {/* 友達削除確認ダイアログ */}
       {friendToRemove && (
@@ -232,13 +231,14 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
           <div className="bg-background rounded-lg shadow-lg w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">友達を削除</h2>
             <p className="text-sm text-muted-foreground">
-              本当に<span className="font-medium text-foreground">{friendToRemove.displayName}</span>さんと友達をやめますか？
+              本当に
+              <span className="font-medium text-foreground">
+                {friendToRemove.displayName}
+              </span>
+              さんと友達をやめますか？
             </p>
             <div className="flex gap-3 justify-end">
-              <Button
-                onClick={() => setFriendToRemove(null)}
-                variant="outline"
-              >
+              <Button onClick={() => setFriendToRemove(null)} variant="outline">
                 キャンセル
               </Button>
               <Button
@@ -256,4 +256,3 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
     </div>
   );
 }
-

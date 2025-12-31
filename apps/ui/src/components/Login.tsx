@@ -1,10 +1,16 @@
+import { Chrome } from "lucide-react";
 import { useState } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useAuth } from "../hooks/useAuth";
 import { isDevRuntime } from "../lib/utils";
-import { Chrome } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Input } from "./ui/input";
 
 interface LoginProps {
   apiUrl: string;
@@ -19,7 +25,8 @@ export function Login({ apiUrl, onLoginSuccess }: LoginProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, user } = useAuth(apiUrl);
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, user } =
+    useAuth(apiUrl);
 
   // ログイン成功時にコールバックを呼ぶ
   if (user) {
@@ -92,87 +99,95 @@ export function Login({ apiUrl, onLoginSuccess }: LoginProps) {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">または</span>
+                  <span className="bg-card px-2 text-muted-foreground">
+                    または
+                  </span>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">
-                  名前
-                </label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="山田太郎"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
+                {isSignUp && (
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="text-sm font-medium">
+                      名前
+                    </label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="山田太郎"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    メールアドレス
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="example@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    autoComplete="email"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    パスワード
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    autoComplete={
+                      isSignUp ? "new-password" : "current-password"
+                    }
+                    minLength={8}
+                  />
+                </div>
+
+                {error && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    {error}
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading
+                    ? "処理中..."
+                    : isSignUp
+                      ? "アカウント作成"
+                      : "ログイン"}
+                </Button>
+              </form>
+
+              <div className="text-center text-sm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setError(null);
+                  }}
+                  className="text-primary hover:underline"
                   disabled={isLoading}
-                />
+                >
+                  {isSignUp
+                    ? "既にアカウントをお持ちですか？ログイン"
+                    : "アカウントをお持ちでないですか？登録"}
+                </button>
               </div>
-            )}
-
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                メールアドレス
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="example@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete="email"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                パスワード
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                minLength={8}
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "処理中..." : isSignUp ? "アカウント作成" : "ログイン"}
-            </Button>
-          </form>
-
-          <div className="text-center text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError(null);
-              }}
-              className="text-primary hover:underline"
-              disabled={isLoading}
-            >
-              {isSignUp
-                ? "既にアカウントをお持ちですか？ログイン"
-                : "アカウントをお持ちでないですか？登録"}
-            </button>
-          </div>
             </>
           )}
         </CardContent>
@@ -180,4 +195,3 @@ export function Login({ apiUrl, onLoginSuccess }: LoginProps) {
     </div>
   );
 }
-

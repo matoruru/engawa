@@ -1,13 +1,19 @@
-import { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Input } from "./ui/input";
-import { LogOut, User, Pencil, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { FriendsList } from "./FriendsList";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
+import { Check, LogOut, Pencil, User, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
+import { FriendsList } from "./FriendsList";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Input } from "./ui/input";
 
 interface User {
   id: string;
@@ -32,7 +38,12 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
   const [usernameInput, setUsernameInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; displayName: string; avatarUrl: string | null } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  } | null>(null);
 
   const app = treaty<AppContract>(apiUrl, {
     fetch: {
@@ -91,7 +102,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
               "flex-1 px-4 py-3 text-sm font-medium transition-colors",
               activeTab === "profile"
                 ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             プロフィール
@@ -103,7 +114,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
               "flex-1 px-4 py-3 text-sm font-medium transition-colors",
               activeTab === "friends"
                 ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             友達
@@ -126,7 +137,10 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                   <div className="relative">
                     <Avatar className="h-24 w-24">
                       {currentUser?.avatarUrl ? (
-                        <AvatarImage src={currentUser.avatarUrl} alt={currentUser.displayName} />
+                        <AvatarImage
+                          src={currentUser.avatarUrl}
+                          alt={currentUser.displayName}
+                        />
                       ) : user.image ? (
                         <AvatarImage src={user.image} alt={user.name} />
                       ) : null}
@@ -162,9 +176,19 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                             const response = await app.me.patch({
                               avatarUrl: dataUrl,
                             });
-                            if (response.data && "success" in response.data && response.data.success) {
-                              setCurrentUser({ ...currentUser, avatarUrl: dataUrl });
-                            } else if (response.data && "error" in response.data) {
+                            if (
+                              response.data &&
+                              "success" in response.data &&
+                              response.data.success
+                            ) {
+                              setCurrentUser({
+                                ...currentUser,
+                                avatarUrl: dataUrl,
+                              });
+                            } else if (
+                              response.data &&
+                              "error" in response.data
+                            ) {
                               setError(response.data.error as string);
                             }
                           } catch (error) {
@@ -179,8 +203,12 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                     />
                   </div>
                   <div className="text-center">
-                    <h2 className="text-xl font-semibold">{currentUser?.displayName || user.name}</h2>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <h2 className="text-xl font-semibold">
+                      {currentUser?.displayName || user.name}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {user.email}
+                    </p>
                   </div>
                 </div>
 
@@ -194,7 +222,9 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                         <div className="flex items-center gap-2">
                           <Input
                             value={displayNameInput}
-                            onChange={(e) => setDisplayNameInput(e.target.value)}
+                            onChange={(e) =>
+                              setDisplayNameInput(e.target.value)
+                            }
                             className="flex-1"
                             autoFocus
                           />
@@ -209,14 +239,27 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                                 const response = await app.me.patch({
                                   displayName: displayNameInput,
                                 });
-                                if (response.data && "success" in response.data && response.data.success) {
-                                  setCurrentUser({ ...currentUser, displayName: displayNameInput });
+                                if (
+                                  response.data &&
+                                  "success" in response.data &&
+                                  response.data.success
+                                ) {
+                                  setCurrentUser({
+                                    ...currentUser,
+                                    displayName: displayNameInput,
+                                  });
                                   setIsEditingDisplayName(false);
-                                } else if (response.data && "error" in response.data) {
+                                } else if (
+                                  response.data &&
+                                  "error" in response.data
+                                ) {
                                   setError(response.data.error as string);
                                 }
                               } catch (error) {
-                                console.error("Failed to update display name:", error);
+                                console.error(
+                                  "Failed to update display name:",
+                                  error,
+                                );
                                 setError("更新に失敗しました");
                               } finally {
                                 setIsSaving(false);
@@ -231,7 +274,9 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                             variant="ghost"
                             onClick={() => {
                               setIsEditingDisplayName(false);
-                              setDisplayNameInput(currentUser?.displayName || "");
+                              setDisplayNameInput(
+                                currentUser?.displayName || "",
+                              );
                               setError(null);
                             }}
                           >
@@ -240,7 +285,9 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">{currentUser?.displayName || user.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {currentUser?.displayName || user.name}
+                          </p>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -276,19 +323,35 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                                 const response = await app.me.patch({
                                   username: usernameInput,
                                 });
-                                if (response.data && "success" in response.data && response.data.success) {
-                                  setCurrentUser({ ...currentUser, username: usernameInput });
+                                if (
+                                  response.data &&
+                                  "success" in response.data &&
+                                  response.data.success
+                                ) {
+                                  setCurrentUser({
+                                    ...currentUser,
+                                    username: usernameInput,
+                                  });
                                   setIsEditingUsername(false);
-                                } else if (response.data && "error" in response.data) {
-                                  const errorMsg = response.data.error as string;
+                                } else if (
+                                  response.data &&
+                                  "error" in response.data
+                                ) {
+                                  const errorMsg = response.data
+                                    .error as string;
                                   if (errorMsg === "USERNAME_ALREADY_EXISTS") {
-                                    setError("このユーザーIDは既に使用されています");
+                                    setError(
+                                      "このユーザーIDは既に使用されています",
+                                    );
                                   } else {
                                     setError(errorMsg);
                                   }
                                 }
                               } catch (error) {
-                                console.error("Failed to update username:", error);
+                                console.error(
+                                  "Failed to update username:",
+                                  error,
+                                );
                                 setError("更新に失敗しました");
                               } finally {
                                 setIsSaving(false);
@@ -312,7 +375,9 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">@{currentUser?.username || ""}</p>
+                          <p className="text-sm text-muted-foreground">
+                            @{currentUser?.username || ""}
+                          </p>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -329,7 +394,9 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                     <User className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">メールアドレス</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {user.email}
+                      </p>
                     </div>
                   </div>
                   {error && (
@@ -357,7 +424,6 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
           <FriendsList apiUrl={apiUrl} />
         )}
       </div>
-
 
       {/* ログアウト確認ダイアログ */}
       {showLogoutDialog && (
@@ -390,4 +456,3 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
     </div>
   );
 }
-
