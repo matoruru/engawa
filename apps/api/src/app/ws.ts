@@ -219,25 +219,44 @@ export const makeWsApp = (svc: AppServices) => {
         });
 
         switch (res.kind) {
-          case "forbidden":
+          case "forbidden": {
             ws.send(wsEncode({ type: "message.rejected", payload: res }));
             return;
+          }
 
-          case "stored":
+          case "stored": {
             join(evt.payload.conversationId, ws.id);
+
+            // 送信者はこのメッセージまで既読にする
+            await svc.updateReadCursor({
+              conversationId: evt.payload.conversationId,
+              userId,
+              lastReadMessageId: res.message.messageId,
+            });
+
             broadcast(evt.payload.conversationId, {
               type: "message.created",
               payload: res.message,
             });
             return;
+          }
 
-          case "duplicate":
+          case "duplicate": {
             join(evt.payload.conversationId, ws.id);
+
+            // duplicateでも既読を進めておく（安全）
+            await svc.updateReadCursor({
+              conversationId: evt.payload.conversationId,
+              userId,
+              lastReadMessageId: res.existing.messageId,
+            });
+
             broadcast(evt.payload.conversationId, {
               type: "message.created",
               payload: res.existing,
             });
             return;
+          }
         }
       }
 

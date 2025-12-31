@@ -1,7 +1,7 @@
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
 import { ArrowLeft, LogOut, Pencil, Send, UserPlus } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v7 as uuidv7 } from "uuid";
 import { cn } from "@/lib/utils";
 import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
@@ -87,13 +87,15 @@ export function Chat({
   const ws = useWebSocket(wsUrl);
 
   // メッセージをスクロール位置の最下部に表示
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages.length, scrollToBottom]);
 
   // 会話タイトルを取得
   useEffect(() => {
@@ -222,6 +224,18 @@ export function Chat({
         // 新規メッセージとして追加
         return [...prev, event.payload];
       });
+
+      // 会話を表示中なら、届いたメッセージまで既読にする
+      if (event.payload.conversationId === conversationId) {
+        ws.send({
+          type: "read.update",
+          payload: {
+            conversationId,
+            lastReadMessageId: event.payload.messageId,
+          },
+        });
+        updateUnreadCount?.(conversationId, 0);
+      }
     });
 
     const unsubscribeMessagesSynced = ws.on("messages.synced", (event) => {
@@ -322,7 +336,7 @@ export function Chat({
   const formatTime = (date: string | Date) => {
     try {
       const d = typeof date === "string" ? new Date(date) : date;
-      if (isNaN(d.getTime())) return "";
+      if (Number.isNaN(d.getTime())) return "";
       return d.toLocaleTimeString("ja-JP", {
         hour: "2-digit",
         minute: "2-digit",
@@ -568,7 +582,8 @@ export function Chat({
                   />
                 </div>
               ) : (
-                <button type="button"
+                <button
+                  type="button"
                   className="text-lg font-semibold cursor-pointer hover:text-primary flex items-center gap-2"
                   onClick={() => {
                     setTitleInput(conversationTitle || "");
