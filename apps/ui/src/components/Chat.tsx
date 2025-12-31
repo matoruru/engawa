@@ -536,6 +536,17 @@ export function Chat({
             )}
           </div>
           <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "text-xs px-2 py-1 rounded-full border shrink-0",
+                ws.isConnected
+                  ? "text-muted-foreground border-border bg-muted/30"
+                  : "text-amber-700 border-amber-200 bg-amber-50"
+              )}
+              title={ws.isConnected ? "接続済み" : "接続中"}
+            >
+              {ws.isConnected ? "オンライン" : "接続中…"}
+            </div>
             <Button
               onClick={() => setShowInviteDialog(true)}
               variant="ghost"
@@ -560,7 +571,7 @@ export function Chat({
       </div>
 
       {/* メッセージリスト */}
-      <ScrollArea className="flex-1 px-4">
+      <ScrollArea className="flex-1 min-h-0 px-4">
         <div className="py-4 space-y-4">
           {isLoading ? (
             <div className="flex justify-center py-8">
@@ -589,10 +600,11 @@ export function Chat({
                       <Avatar className="h-8 w-8">
                         {member?.avatarUrl ? (
                           <AvatarImage src={member.avatarUrl} alt={displayName} />
-                        ) : null}
-                        <AvatarFallback className="text-xs">
-                          {getInitials(displayName)}
-                        </AvatarFallback>
+                        ) : (
+                          <AvatarFallback className="text-xs">
+                            {getInitials(displayName)}
+                          </AvatarFallback>
+                        )}
                       </Avatar>
                       <span className="text-xs text-muted-foreground max-w-[60px] truncate text-center">
                         {displayName}
@@ -666,11 +678,6 @@ export function Chat({
             <Send className="h-5 w-5" />
           </Button>
         </div>
-        {!ws.isConnected && (
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            接続中...
-          </p>
-        )}
       </div>
 
       {/* 友達追加ダイアログ */}
