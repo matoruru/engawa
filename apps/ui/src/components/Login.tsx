@@ -39,7 +39,7 @@ export function Login({ apiUrl, onLoginSuccess }: LoginProps) {
     setIsLoading(true);
 
     try {
-      let result;
+      let result: { success: boolean; error?: string };
       if (isSignUp) {
         if (!name.trim()) {
           setError("名前を入力してください");
