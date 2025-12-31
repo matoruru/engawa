@@ -49,6 +49,18 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
     return this.usersByConversation.get(conversationId) || [];
   }
+
+  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+    this.members.delete(`${conversationId}|${userId}`);
+    
+    // Update conversationsByUser
+    const userConversations = this.conversationsByUser.get(userId) || [];
+    this.conversationsByUser.set(userId, userConversations.filter(cid => cid !== conversationId));
+    
+    // Update usersByConversation
+    const conversationUsers = this.usersByConversation.get(conversationId) || [];
+    this.usersByConversation.set(conversationId, conversationUsers.filter(uid => uid !== userId));
+  }
 }
 
 class InMemoryMessageRepo implements MessageRepository {

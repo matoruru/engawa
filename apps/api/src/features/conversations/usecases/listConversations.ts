@@ -3,6 +3,7 @@ import { UserIdSchema } from "@/shared/ids";
 import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { MessageQueryRepository } from "../../messages/ports";
 import type { Message } from "../../messages/domain";
+import type { ConversationRepository } from "../ports";
 
 export const ListConversationsInputSchema = z.object({
   userId: UserIdSchema,
@@ -14,10 +15,12 @@ export type ListConversationsInput = z.infer<
 export interface ListConversationsDeps {
   membersRepo: ConversationMembersRepository;
   messageQueryRepo: MessageQueryRepository;
+  conversationRepo: ConversationRepository;
 }
 
 export type ConversationPreview = {
   conversationId: string;
+  title: string | null;
   latestMessages: readonly Message[];
 };
 
@@ -40,8 +43,10 @@ export const makeListConversations =
           conversationId,
           2,
         );
+        const title = await deps.conversationRepo.getTitle(conversationId);
         return {
           conversationId: String(conversationId),
+          title,
           latestMessages,
         };
       }),

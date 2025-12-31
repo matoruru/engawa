@@ -10,6 +10,8 @@ import { CreateConversationInputSchema } from "../features/conversations/usecase
 import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
 import { AddMemberToConversationInputSchema } from "../features/conversations/usecases/addMemberToConversation";
 import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
+import { LeaveConversationInputSchema } from "../features/conversations/usecases/leaveConversation";
+import { UpdateConversationTitleInputSchema } from "../features/conversations/usecases/updateConversationTitle";
 import { ListFriendsInputSchema } from "../features/friendships/usecases/listFriends";
 import { RemoveFriendInputSchema } from "../features/friendships/usecases/removeFriend";
 import { CreateInviteInputSchema } from "../features/invites/usecases/createInvite";
@@ -147,6 +149,44 @@ export const makeHttpHandlers = (svc: AppServices) => ({
       return { success: false, error: result.reason };
     }
     throw new Error("Unexpected result from listConversationMembers");
+  },
+
+  leaveConversation: async (
+    userId: UserId,
+    conversationId: ConversationId,
+  ) => {
+    const input = LeaveConversationInputSchema.parse({
+      userId,
+      conversationId,
+    });
+    const result = await svc.leaveConversation(input);
+    
+    if (result.kind === "left") {
+      return { success: true };
+    } else if (result.kind === "forbidden") {
+      return { success: false, error: result.reason };
+    }
+    throw new Error("Unexpected result from leaveConversation");
+  },
+
+  updateConversationTitle: async (
+    userId: UserId,
+    conversationId: ConversationId,
+    title: string | null,
+  ) => {
+    const input = UpdateConversationTitleInputSchema.parse({
+      userId,
+      conversationId,
+      title,
+    });
+    const result = await svc.updateConversationTitle(input);
+    
+    if (result.kind === "updated") {
+      return { success: true };
+    } else if (result.kind === "forbidden") {
+      return { success: false, error: result.reason };
+    }
+    throw new Error("Unexpected result from updateConversationTitle");
   },
 
   listFriends: async (userId: UserId) => {

@@ -18,6 +18,7 @@ import { makeCreateConversation } from "../../../src/features/conversations/usec
 import { makeListConversations } from "../../../src/features/conversations/usecases/listConversations";
 import { makeAddMemberToConversation } from "../../../src/features/conversations/usecases/addMemberToConversation";
 import { makeListConversationMembers } from "../../../src/features/conversations/usecases/listConversationMembers";
+import { makePostgresMessageQueryRepo } from "../../../src/features/messages/infra/postgres/messageQueryRepo";
 import {
   resetDb,
   seedUser,
@@ -67,8 +68,11 @@ describe("e2e/usecases: conversations flow", () => {
       now: () => new Date("2025-12-27T00:00:00.000Z"),
     });
 
+    const messageQueryRepo = makePostgresMessageQueryRepo(db);
     const listConversations = makeListConversations({
       membersRepo,
+      messageQueryRepo,
+      conversationRepo,
     });
 
     // 会話を作成
@@ -87,8 +91,9 @@ describe("e2e/usecases: conversations flow", () => {
     expect(l1.kind).toBe("ok");
     if (l1.kind === "ok") {
       expect(l1.conversations.length).toBe(2);
-      expect(l1.conversations).toContain(String(cid1));
-      expect(l1.conversations).toContain(String(cid2));
+      const conversationIds = l1.conversations.map(c => c.conversationId);
+      expect(conversationIds).toContain(cid1);
+      expect(conversationIds).toContain(cid2);
     }
 
     // uid2の会話一覧は空

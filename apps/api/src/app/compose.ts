@@ -29,6 +29,16 @@ import {
   type ListConversationMembersInput,
   type ListConversationMembersResult,
 } from "../features/conversations/usecases/listConversationMembers";
+import {
+  makeLeaveConversation,
+  type LeaveConversationInput,
+  type LeaveConversationResult,
+} from "../features/conversations/usecases/leaveConversation";
+import {
+  makeUpdateConversationTitle,
+  type UpdateConversationTitleInput,
+  type UpdateConversationTitleResult,
+} from "../features/conversations/usecases/updateConversationTitle";
 import { makePostgresMessageQueryRepo } from "../features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresMessageRepo } from "../features/messages/infra/postgres/messageRepo";
 import {
@@ -102,6 +112,12 @@ export type AppServices = {
   listConversationMembers: (
     input: ListConversationMembersInput,
   ) => Promise<ListConversationMembersResult>;
+  leaveConversation: (
+    input: LeaveConversationInput,
+  ) => Promise<LeaveConversationResult>;
+  updateConversationTitle: (
+    input: UpdateConversationTitleInput,
+  ) => Promise<UpdateConversationTitleResult>;
   listFriends: (input: ListFriendsInput) => Promise<ListFriendsResult>;
   removeFriend: (input: RemoveFriendInput) => Promise<RemoveFriendResult>;
   createInvite: (input: CreateInviteInput) => Promise<CreateInviteResult>;
@@ -177,6 +193,7 @@ export const composeApp = (): AppServices => {
   const listConversations = makeListConversations({
     membersRepo,
     messageQueryRepo,
+    conversationRepo,
   });
 
   const addMemberToConversation = makeAddMemberToConversation({
@@ -185,6 +202,15 @@ export const composeApp = (): AppServices => {
 
   const listConversationMembers = makeListConversationMembers({
     userRepo,
+    membersRepo,
+  });
+
+  const leaveConversation = makeLeaveConversation({
+    membersRepo,
+  });
+
+  const updateConversationTitle = makeUpdateConversationTitle({
+    conversationRepo,
     membersRepo,
   });
 
@@ -232,6 +258,8 @@ export const composeApp = (): AppServices => {
     listConversations,
     addMemberToConversation,
     listConversationMembers,
+    leaveConversation,
+    updateConversationTitle,
     listFriends,
     removeFriend,
     createInvite,

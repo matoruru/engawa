@@ -4,7 +4,6 @@ import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { X, UserPlus, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
 
@@ -67,7 +66,7 @@ export function InviteUserDialog({
     const loadMembers = async () => {
       try {
         setIsLoadingMembers(true);
-        const response = await app.conversations[conversationId].members.get();
+        const response = await app.conversations({ conversationId }).members.get();
 
         if (response.data && "members" in response.data) {
           const membersData = response.data.members;
@@ -118,14 +117,14 @@ export function InviteUserDialog({
   const handleInvite = async (userId: string) => {
     try {
       setIsInviting(userId);
-      const response = await app.conversations[conversationId].members.post({
+      const response = await app.conversations({ conversationId }).members.post({
         userId,
       });
 
       if (response.data && "success" in response.data) {
         if (response.data.success) {
           // メンバー一覧を再取得
-          const membersResponse = await app.conversations[conversationId].members.get();
+          const membersResponse = await app.conversations({ conversationId }).members.get();
           if (membersResponse.data && "members" in membersResponse.data) {
             const membersData = membersResponse.data.members;
             if (Array.isArray(membersData)) {

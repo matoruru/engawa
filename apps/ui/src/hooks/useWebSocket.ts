@@ -54,6 +54,10 @@ export type WsServerEvent =
         | { kind: "updated"; cursor: WsReadCursor }
         | { kind: "ignored"; cursor: WsReadCursor | null }
         | { kind: "forbidden"; reason: "NOT_A_MEMBER" };
+    }
+  | {
+      type: "*";
+      payload: never;
     };
 
 export type WsMessage = {
@@ -152,7 +156,7 @@ export function useWebSocket(url: string) {
   };
 
   const on = <T extends WsServerEvent["type"]>(
-    type: T | "*",
+    type: T,
     listener: (event: Extract<WsServerEvent, { type: T }>) => void
   ) => {
     if (!listenersRef.current.has(type)) {

@@ -43,6 +43,15 @@ import { makePostgresConversationReadsRepo } from "../../../src/features/reads/i
 import { makeUpdateReadCursor } from "../../../src/features/reads/usecases/updateReadCursor";
 import { makePostgresUserRepo } from "../../../src/shared/infra/postgres/userRepo";
 import { uuidv7 } from "../../../src/shared/uuid";
+import { makePostgresFriendshipsRepo } from "../../../src/features/friendships/infra/postgres/friendshipsRepo";
+import { makePostgresInvitesRepo } from "../../../src/features/invites/infra/postgres/invitesRepo";
+import { makeListFriends } from "../../../src/features/friendships/usecases/listFriends";
+import { makeRemoveFriend } from "../../../src/features/friendships/usecases/removeFriend";
+import { makeCreateInvite } from "../../../src/features/invites/usecases/createInvite";
+import { makeGetInvite } from "../../../src/features/invites/usecases/getInvite";
+import { makeAcceptInvite } from "../../../src/features/invites/usecases/acceptInvite";
+import { InviteTokenSchema } from "../../../src/features/invites/domain";
+import crypto from "crypto";
 
 import {
   resetDb,
@@ -276,6 +285,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
 
     const listConversations = makeListConversations({
       membersRepo,
+      messageQueryRepo: queryRepo,
     });
 
     const addMemberToConversation = makeAddMemberToConversation({
@@ -285,6 +295,39 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     const listConversationMembers = makeListConversationMembers({
       userRepo,
       membersRepo,
+    });
+
+    // friendships and invites
+    const friendshipsRepo = makePostgresFriendshipsRepo(db);
+    const invitesRepo = makePostgresInvitesRepo(db);
+
+    const listFriends = makeListFriends({
+      friendshipsRepo,
+      userRepo,
+    });
+
+    const removeFriend = makeRemoveFriend({
+      friendshipsRepo,
+    });
+
+    const createInvite = makeCreateInvite({
+      invitesRepo,
+      generateToken: () => {
+        return InviteTokenSchema.parse(crypto.randomBytes(32).toString("hex"));
+      },
+      now: () => new Date(),
+    });
+
+    const getInvite = makeGetInvite({
+      invitesRepo,
+      userRepo,
+      now: () => new Date(),
+    });
+
+    const acceptInvite = makeAcceptInvite({
+      invitesRepo,
+      friendshipsRepo,
+      now: () => new Date(),
     });
 
     const svc = {
@@ -298,6 +341,11 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       listConversations,
       addMemberToConversation,
       listConversationMembers,
+      listFriends,
+      removeFriend,
+      createInvite,
+      getInvite,
+      acceptInvite,
     };
 
     // @ts-expect-error Elysiaの型が複雑なので無視する

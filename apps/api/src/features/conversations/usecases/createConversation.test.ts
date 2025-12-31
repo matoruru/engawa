@@ -44,13 +44,31 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
     return this.usersByConversation.get(conversationId) || [];
   }
+
+  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+    this.members.delete(`${conversationId}|${userId}`);
+    const userConversations = this.conversationsByUser.get(userId) || [];
+    this.conversationsByUser.set(userId, userConversations.filter(cid => cid !== conversationId));
+    const conversationUsers = this.usersByConversation.get(conversationId) || [];
+    this.usersByConversation.set(conversationId, conversationUsers.filter(uid => uid !== userId));
+  }
 }
 
 class InMemoryConversationRepo implements ConversationRepository {
   private readonly conversations = new Set<string>();
+  private readonly titles = new Map<string, string | null>();
 
   async create(conversationId: ConversationId): Promise<void> {
     this.conversations.add(String(conversationId));
+    this.titles.set(String(conversationId), null);
+  }
+
+  async updateTitle(conversationId: ConversationId, title: string | null): Promise<void> {
+    this.titles.set(String(conversationId), title);
+  }
+
+  async getTitle(conversationId: ConversationId): Promise<string | null> {
+    return this.titles.get(String(conversationId)) ?? null;
   }
 
   get createdConversations(): readonly string[] {

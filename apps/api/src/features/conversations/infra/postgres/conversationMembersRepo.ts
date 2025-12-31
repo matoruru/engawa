@@ -64,4 +64,15 @@ export const makePostgresConversationMembersRepo = (
       ON CONFLICT (conversation_id, user_id) DO NOTHING
     `;
   },
+
+  removeMember: async (
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> => {
+    await db`
+      DELETE FROM conversation_members
+      WHERE conversation_id = ${conversationId}
+        AND user_id = ${userId}
+    `;
+  },
 });

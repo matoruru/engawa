@@ -93,6 +93,38 @@ const app = new Elysia()
       }),
     },
   )
+  .delete(
+    "/conversations/:conversationId/members",
+    ({ params, userId }) =>
+      handlers.leaveConversation(
+        userId,
+        ConversationIdSchema.parse(params.conversationId),
+      ),
+    {
+      auth: true,
+      params: t.Object({
+        conversationId: t.String(),
+      }),
+    },
+  )
+  .patch(
+    "/conversations/:conversationId/title",
+    ({ params, body, userId }) =>
+      handlers.updateConversationTitle(
+        userId,
+        ConversationIdSchema.parse(params.conversationId),
+        body.title ?? null,
+      ),
+    {
+      auth: true,
+      params: t.Object({
+        conversationId: t.String(),
+      }),
+      body: t.Object({
+        title: t.Optional(t.String()),
+      }),
+    },
+  )
   .get(
     "/friends",
     ({ userId }) => handlers.listFriends(userId),

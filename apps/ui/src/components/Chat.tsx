@@ -7,7 +7,7 @@ import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
 import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
-import { Send, ArrowLeft, UserPlus } from "lucide-react";
+import { Send, ArrowLeft, UserPlus, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { v7 as uuidv7 } from "uuid";
 
@@ -52,6 +52,10 @@ export function Chat({
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [conversationTitle, setConversationTitle] = useState<string | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +80,27 @@ export function Chat({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 会話タイトルを取得
+  useEffect(() => {
+    const loadTitle = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/conversations/${conversationId}`, {
+          credentials: "include",
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setConversationTitle(data.title || `会話 ${conversationId.slice(0, 8)}`);
+        } else {
+          setConversationTitle(`会話 ${conversationId.slice(0, 8)}`);
+        }
+      } catch (error) {
+        console.error("Failed to load title:", error);
+        setConversationTitle(`会話 ${conversationId.slice(0, 8)}`);
+      }
+    };
+    loadTitle();
+  }, [conversationId, apiUrl]);
 
   // 初期メッセージの読み込み
   useEffect(() => {
@@ -204,11 +229,21 @@ export function Chat({
     }
   };
 
+  const [isComposing, setIsComposing] = useState(false);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isComposing) {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
   };
 
   const formatTime = (date: string | Date) => {
@@ -228,6 +263,60 @@ export function Chat({
     return userId.slice(0, 2).toUpperCase();
   };
 
+  const handleLeaveConversation = async () => {
+    if (!confirm("この会話から脱会しますか？")) {
+      return;
+    }
+
+    try {
+      setIsLeaving(true);
+      const response = await fetch(`${apiUrl}/conversations/${conversationId}/members`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // 会話一覧に戻る
+          if (onBack) {
+            onBack();
+          }
+        } else {
+          alert("脱会に失敗しました");
+        }
+      } else {
+        alert("脱会に失敗しました");
+      }
+    } catch (error) {
+      console.error("Failed to leave conversation:", error);
+      alert("脱会に失敗しました");
+    } finally {
+      setIsLeaving(false);
+    }
+  };
+
+  const handleSaveTitle = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/conversations/${conversationId}/title`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ title: titleInput || null }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setConversationTitle(titleInput || `会話 ${conversationId.slice(0, 8)}`);
+          setIsEditingTitle(false);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update title:", error);
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* ヘッダー */}
@@ -244,16 +333,57 @@ export function Chat({
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
-            <h1 className="text-lg font-semibold">チャット</h1>
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={titleInput}
+                  onChange={(e) => setTitleInput(e.target.value)}
+                  onBlur={handleSaveTitle}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSaveTitle();
+                    } else if (e.key === "Escape") {
+                      setIsEditingTitle(false);
+                      setTitleInput(conversationTitle || "");
+                    }
+                  }}
+                  className="text-lg font-semibold bg-transparent border-b border-primary focus:outline-none"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <h1 
+                className="text-lg font-semibold cursor-pointer hover:text-primary"
+                onClick={() => {
+                  setTitleInput(conversationTitle || "");
+                  setIsEditingTitle(true);
+                }}
+              >
+                {conversationTitle || `会話 ${conversationId.slice(0, 8)}`}
+              </h1>
+            )}
           </div>
-          <Button
-            onClick={() => setShowInviteDialog(true)}
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-          >
-            <UserPlus className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowInviteDialog(true)}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+            >
+              <UserPlus className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={handleLeaveConversation}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              disabled={isLeaving}
+              title="会話から脱会"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -326,10 +456,12 @@ export function Chat({
       {/* 入力エリア */}
       <div className="border-t border-border bg-card p-4 safe-area-inset-bottom">
         <div className="flex gap-2 items-end">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
             placeholder="メッセージを入力..."
             className="min-h-[60px] max-h-[120px] resize-none text-base"
             rows={1}

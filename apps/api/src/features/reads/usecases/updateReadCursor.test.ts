@@ -15,7 +15,7 @@ import { makeUpdateReadCursor } from "./updateReadCursor";
 // --- Test doubles ---
 class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly members = new Set<string>();
-  addMember(conversationId: ConversationId, userId: UserId): void {
+  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
   }
   async isMember(
@@ -23,6 +23,15 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
     userId: UserId,
   ): Promise<boolean> {
     return this.members.has(`${conversationId}|${userId}`);
+  }
+  async listByUserId(userId: UserId): Promise<readonly ConversationId[]> {
+    return [];
+  }
+  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+    return [];
+  }
+  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+    this.members.delete(`${conversationId}|${userId}`);
   }
 }
 

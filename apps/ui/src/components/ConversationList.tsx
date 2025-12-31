@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface ConversationPreview {
   conversationId: string;
+  title: string | null;
   latestMessages: Array<{
     messageText: string;
     senderId: string;
@@ -75,7 +76,7 @@ export function ConversationList({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        会話 {conversation.conversationId.slice(0, 8)}
+                        {conversation.title || `会話 ${conversation.conversationId.slice(0, 8)}`}
                       </p>
                       {conversation.latestMessages.length > 0 ? (
                         <div className="space-y-0.5 mt-1">

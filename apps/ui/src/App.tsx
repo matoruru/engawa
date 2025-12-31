@@ -13,7 +13,7 @@ function App() {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const { user, appUserId, isLoading, refreshSession, signOut } = useAuth(apiUrl);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<Array<{ conversationId: string; latestMessages: Array<{ messageText: string; senderId: string; createdAt: string }> }>>([]);
+  const [conversations, setConversations] = useState<Array<{ conversationId: string; title: string | null; latestMessages: Array<{ messageText: string; senderId: string; createdAt: string }> }>>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -58,6 +58,7 @@ function App() {
         if (response.data && "conversations" in response.data) {
           const conversationList = Array.from(response.data.conversations).map((c: any) => ({
             conversationId: c.conversationId,
+            title: c.title,
             latestMessages: Array.from(c.latestMessages || []).map((m: any) => ({
               messageText: m.messageText,
               senderId: m.senderId,
@@ -95,7 +96,7 @@ function App() {
       if (response.data && "conversationId" in response.data) {
         const newConversationId = response.data.conversationId as string;
         setConversations((prev) => [
-          { conversationId: newConversationId, latestMessages: [] },
+          { conversationId: newConversationId, title: null, latestMessages: [] },
           ...prev,
         ]);
         setConversationId(newConversationId);
