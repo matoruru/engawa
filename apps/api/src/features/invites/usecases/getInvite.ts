@@ -53,7 +53,7 @@ export const makeGetInvite =
         token: invite.token,
         inviterId: String(invite.inviterId),
         expiresAt: invite.expiresAt.toISOString(),
-        acceptedAt: invite.acceptedAt?.toISOString() || null,
+        acceptedAt: invite.acceptedAt ? new Date(invite.acceptedAt).toISOString() : null,
         inviter,
       },
     };
