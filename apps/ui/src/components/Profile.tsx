@@ -1,7 +1,7 @@
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
 import { Check, LogOut, Pencil, User as UserIcon, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { FriendsList } from "./FriendsList";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -45,11 +45,13 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
     avatarUrl: string | null;
   } | null>(null);
 
-  const app = treaty<AppContract>(apiUrl, {
-    fetch: {
-      credentials: "include",
-    },
-  });
+  const app = useMemo(
+    () =>
+      treaty<AppContract>(apiUrl, {
+        fetch: { credentials: "include" },
+      }),
+    [apiUrl],
+  );
 
   // 現在のユーザー情報を取得
   useEffect(() => {
@@ -72,7 +74,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
       }
     };
     loadCurrentUser();
-  }, [apiUrl]);
+  }, [app]);
 
   const getInitials = (name: string): string => {
     return name
