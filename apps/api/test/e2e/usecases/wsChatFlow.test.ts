@@ -62,6 +62,7 @@ import {
   seedUser,
 } from "../../helpers/seed";
 import { makeUpdateUserProfile } from "src/features/users/usecases/updateUserProfile";
+import { makeGetConversation } from "src/features/conversations/usecases/getConversation";
 
 const must = (v: string | undefined, name: string): string => {
   if (!v) throw new Error(`Missing env: ${name}`);
@@ -293,6 +294,11 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       readsRepo,
     });
 
+    const getConversation = makeGetConversation({
+      conversationRepo,
+      membersRepo,
+    });
+
     const addMemberToConversation = makeAddMemberToConversation({
       membersRepo,
     });
@@ -357,6 +363,7 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       updateReadCursor,
       createConversation,
       listConversations,
+      getConversation,
       addMemberToConversation,
       listConversationMembers,
       leaveConversation,
