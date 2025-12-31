@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Input } from "./ui/input";
-import { LogOut, User, MessageSquare, Pencil, Check, X } from "lucide-react";
+import { LogOut, User, Pencil, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FriendsList } from "./FriendsList";
 import { treaty } from "@elysiajs/eden";
@@ -356,31 +356,6 @@ export function Profile({ user, onBack, onSignOut, apiUrl }: ProfileProps) {
         )}
       </div>
 
-      {/* タブバー */}
-      <div className="border-t border-border bg-card safe-area-inset-bottom">
-        <div className="flex">
-          <button
-            onClick={onBack}
-            className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
-              "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <MessageSquare className="h-5 w-5" />
-            <span className="text-xs font-medium">会話</span>
-          </button>
-          <button
-            onClick={() => {}}
-            className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
-              "text-primary bg-primary/10"
-            )}
-          >
-            <User className="h-5 w-5" />
-            <span className="text-xs font-medium">プロフィール</span>
-          </button>
-        </div>
-      </div>
 
       {/* ログアウト確認ダイアログ */}
       {showLogoutDialog && (

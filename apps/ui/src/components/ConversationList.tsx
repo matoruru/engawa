@@ -1,39 +1,33 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Plus, MessageSquare, User } from "lucide-react";
+import { Plus, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface ConversationPreview {
-  conversationId: string;
-  title: string | null;
-  latestMessages: Array<{
-    messageText: string;
-    senderId: string;
-    senderDisplayName: string;
-    createdAt: string;
-  }>;
-  unreadCount: number;
-}
+import { useConversations } from "../contexts/ConversationsContext";
 
 interface ConversationListProps {
-  conversations: ConversationPreview[];
-  selectedConversationId: string | null;
-  onSelectConversation: (conversationId: string) => void;
-  onCreateConversation: () => void;
-  isCreatingConversation: boolean;
   currentUserId: string;
-  onOpenProfile: () => void;
+  onCreateConversation: () => void;
 }
 
 export function ConversationList({
-  conversations,
-  selectedConversationId,
-  onSelectConversation,
-  onCreateConversation,
-  isCreatingConversation,
   currentUserId,
-  onOpenProfile,
+  onCreateConversation,
 }: ConversationListProps) {
+  const navigate = useNavigate();
+  const { conversations } = useConversations();
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+
+  const handleCreateConversation = async () => {
+    setIsCreatingConversation(true);
+    try {
+      await onCreateConversation();
+    } finally {
+      setIsCreatingConversation(false);
+    }
+  };
+
   return (
     <div className="relative flex h-screen flex-col bg-background">
       {/* ヘッダー */}
@@ -51,7 +45,7 @@ export function ConversationList({
               <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">会話がありません</p>
               <Button
-                onClick={onCreateConversation}
+                onClick={handleCreateConversation}
                 disabled={isCreatingConversation}
                 size="sm"
               >
@@ -63,13 +57,10 @@ export function ConversationList({
               {conversations.map((conversation) => (
                 <button
                   key={conversation.conversationId}
-                  onClick={() => onSelectConversation(conversation.conversationId)}
+                  onClick={() => navigate(`/conversations/${conversation.conversationId}`)}
                   className={cn(
                     "w-full rounded-lg px-4 py-3 text-left transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    selectedConversationId === conversation.conversationId
-                      ? "bg-accent text-accent-foreground"
-                      : ""
+                    "hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -112,39 +103,10 @@ export function ConversationList({
         </div>
       </ScrollArea>
 
-      {/* タブバー */}
-      <div className="border-t border-border bg-card safe-area-inset-bottom">
-        <div className="flex">
-          <button
-            onClick={() => {}}
-            className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors relative",
-              "text-primary bg-primary/10"
-            )}
-          >
-            <MessageSquare className="h-5 w-5" />
-            <span className="text-xs font-medium">会話</span>
-            {conversations.some(c => c.unreadCount > 0) && (
-              <span className="absolute top-2 right-1/2 translate-x-4 h-2 w-2 rounded-full bg-red-500" />
-            )}
-          </button>
-          <button
-            onClick={onOpenProfile}
-            className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
-              "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <User className="h-5 w-5" />
-            <span className="text-xs font-medium">プロフィール</span>
-          </button>
-        </div>
-      </div>
-
       {/* フローティングアクションボタン */}
       <div className="absolute bottom-24 right-4 safe-area-inset-bottom">
         <Button
-          onClick={onCreateConversation}
+          onClick={handleCreateConversation}
           disabled={isCreatingConversation}
           size="icon"
           className="h-14 w-14 rounded-full shadow-lg bg-blue-500 hover:bg-blue-600 text-white"

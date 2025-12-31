@@ -1,18 +1,27 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { UserCheck, AlertCircle } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { useLocation } from "../hooks/useLocation";
 
 interface AcceptInviteProps {
-  token: string;
   apiUrl: string;
 }
 
-export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
-  const location = useLocation();
+export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
+  const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
+  
+  if (!token) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">無効な招待リンクです</p>
+      </div>
+    );
+  }
+
   const [invite, setInvite] = useState<{
     token: string;
     inviterId: string;
@@ -210,7 +219,7 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
           <CardContent>
             <Button
               onClick={() => {
-                location.navigate("/");
+                navigate("/");
               }}
               className="w-full"
             >
@@ -268,8 +277,8 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
               </p>
               <Button
                 onClick={() => {
-                location.navigate("/");
-              }}
+                  navigate("/");
+                }}
                 className="w-full"
               >
                 ログイン

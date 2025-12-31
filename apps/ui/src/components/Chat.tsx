@@ -38,6 +38,7 @@ interface ChatProps {
   apiUrl?: string;
   wsUrl?: string;
   onBack?: () => void;
+  updateUnreadCount?: (conversationId: string, unreadCount: number) => void;
 }
 
 export function Chat({
@@ -46,6 +47,7 @@ export function Chat({
   apiUrl = "http://localhost:3000",
   wsUrl,
   onBack,
+  updateUnreadCount,
 }: ChatProps) {
   const [messages, setMessages] = useState<WsMessage[]>([]);
   const [input, setInput] = useState("");
@@ -161,6 +163,10 @@ export function Chat({
                 lastReadMessageId: latestMessage.messageId,
               },
             });
+            // 未読数を0に更新
+            if (updateUnreadCount) {
+              updateUnreadCount(conversationId, 0);
+            }
           }
         }
       } catch (error) {
