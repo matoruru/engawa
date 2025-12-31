@@ -1,5 +1,6 @@
+import { logger } from "@bogeychan/elysia-logger";
+import cors from "@elysiajs/cors";
 import { Elysia, t } from "elysia";
-import { auth } from "./app/auth";
 import { makeBetterAuthPlugin } from "./app/betterAuthPlugin";
 import { composeApp } from "./app/compose";
 import { makeHttpHandlers } from "./app/httpHandlers";
@@ -8,17 +9,19 @@ import { makeWsApp } from "./app/ws";
 import { env } from "./shared/env";
 import { ConversationIdSchema, UserIdSchema } from "./shared/ids";
 import { isDevRuntime } from "./shared/runtime";
-import cors from "@elysiajs/cors";
 
 const services = composeApp();
 const handlers = makeHttpHandlers(services);
 
 const app = new Elysia()
+  .use(logger())
   .use(makeBetterAuthPlugin(services.db))
-  .use(cors({
-    origin: env.ALLOWED_ORIGINS.split(","),
-    credentials: true, // Allow cookies
-  }))
+  .use(
+    cors({
+      origin: env.ALLOWED_ORIGINS.split(","),
+      credentials: true, // Allow cookies
+    }),
+  )
   .use(makeWsApp(services))
   .get("/healthz", () => ({ ok: true }))
   .post(
@@ -36,11 +39,9 @@ const app = new Elysia()
     ({ body, userId }) => handlers.updateReadCursor(userId, body),
     { auth: true },
   )
-  .get(
-    "/conversations",
-    ({ userId }) => handlers.listConversations(userId),
-    { auth: true },
-  )
+  .get("/conversations", ({ userId }) => handlers.listConversations(userId), {
+    auth: true,
+  })
   .get(
     "/conversations/:conversationId",
     ({ params, userId }) =>
@@ -55,16 +56,10 @@ const app = new Elysia()
       }),
     },
   )
-  .post(
-    "/conversations",
-    ({ userId }) => handlers.createConversation(userId),
-    { auth: true },
-  )
-  .get(
-    "/me",
-    ({ userId }) => handlers.getCurrentUser(userId),
-    { auth: true },
-  )
+  .post("/conversations", ({ userId }) => handlers.createConversation(userId), {
+    auth: true,
+  })
+  .get("/me", ({ userId }) => handlers.getCurrentUser(userId), { auth: true })
   .patch(
     "/me",
     ({ body, userId }) => handlers.updateUserProfile(userId, body),
@@ -144,15 +139,13 @@ const app = new Elysia()
       }),
     },
   )
-  .get(
-    "/friends",
-    ({ userId }) => handlers.listFriends(userId),
-    { auth: true },
-  )
+  .get("/friends", ({ userId }) => handlers.listFriends(userId), { auth: true })
   .delete(
     "/friends/:friendId",
     ({ params, userId }) =>
-      handlers.removeFriend(userId, { friendId: UserIdSchema.parse(params.friendId) }),
+      handlers.removeFriend(userId, {
+        friendId: UserIdSchema.parse(params.friendId),
+      }),
     {
       auth: true,
       params: t.Object({
@@ -160,21 +153,15 @@ const app = new Elysia()
       }),
     },
   )
-  .post(
-    "/invites",
-    ({ userId }) => handlers.createInvite(userId),
-    { auth: true },
-  )
-  .get(
-    "/invites/:token",
-    ({ params }) => handlers.getInvite(params.token),
-    {
-      auth: false, // 認証不要（招待リンクは誰でも開ける）
-      params: t.Object({
-        token: t.String(),
-      }),
-    },
-  )
+  .post("/invites", ({ userId }) => handlers.createInvite(userId), {
+    auth: true,
+  })
+  .get("/invites/:token", ({ params }) => handlers.getInvite(params.token), {
+    auth: false, // 認証不要（招待リンクは誰でも開ける）
+    params: t.Object({
+      token: t.String(),
+    }),
+  })
   .post(
     "/invites/:token/accept",
     ({ params, userId }) => handlers.acceptInvite(userId, params.token),
@@ -184,14 +171,14 @@ const app = new Elysia()
         token: t.String(),
       }),
     },
-  )
+  );
 
-  if (isDevRuntime()) {
-    app.use(sessionRoutes);
-  }
+if (isDevRuntime()) {
+  app.use(sessionRoutes);
+}
 
-  app.listen(env.PORT, () => {
-    console.log(`Listening on http://localhost:${env.PORT}`);
-  });
+app.listen(env.PORT, () => {
+  console.log(`Listening on http://localhost:${env.PORT}`);
+});
 
 export type App = typeof app;
