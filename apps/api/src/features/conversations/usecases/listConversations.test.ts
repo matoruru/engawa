@@ -11,6 +11,7 @@ import type { MessageQueryRepository } from "../../messages/ports";
 import type { Message } from "../../messages/domain";
 import { makeListConversations } from "./listConversations";
 import { ConversationRepository } from "../ports";
+import type { ConversationReadsRepository } from "../../reads/ports";
 
 // --- Test doubles ---
 class InMemoryMembersRepo implements ConversationMembersRepository {
@@ -64,6 +65,9 @@ class InMemoryMessageQueryRepo implements MessageQueryRepository {
   async listLatestByConversation(): Promise<readonly Message[]> {
     return [];
   }
+  async countUnread(): Promise<number> {
+    return 0;
+  }
 }
 
 class InMemoryConversationRepo implements ConversationRepository {
@@ -73,8 +77,17 @@ class InMemoryConversationRepo implements ConversationRepository {
   updateTitle(conversationId: ConversationId, title: string | null): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  async getTitle(): Promise<string | null> {
+  async getTitle(conversationId: ConversationId): Promise<string | null> {
     return null;
+  }
+}
+
+class InMemoryReadsRepo implements ConversationReadsRepository {
+  async get(): Promise<any> {
+    return null;
+  }
+  async upsert(): Promise<void> {
+    // noop
   }
 }
 
@@ -88,8 +101,9 @@ describe("listConversations (feature/conversations)", () => {
     const membersRepo = new InMemoryMembersRepo();
     const messageQueryRepo = new InMemoryMessageQueryRepo();
     const conversationRepo = new InMemoryConversationRepo();
+    const readsRepo = new InMemoryReadsRepo();
 
-    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo });
+    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo, readsRepo });
 
     const res = await listConversations({ userId: uid });
 
@@ -102,11 +116,12 @@ describe("listConversations (feature/conversations)", () => {
   it("returns all conversations for a user", async () => {
     const membersRepo = new InMemoryMembersRepo();
     const messageQueryRepo = new InMemoryMessageQueryRepo();
-    const conversationRepo = new InMemoryConversationRepo();  
+    const conversationRepo = new InMemoryConversationRepo();
+    const readsRepo = new InMemoryReadsRepo();
     await membersRepo.addMember(cid1, uid);
     await membersRepo.addMember(cid2, uid);
 
-    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo });
+    const listConversations = makeListConversations({ membersRepo, messageQueryRepo, conversationRepo, readsRepo });
 
     const res = await listConversations({ userId: uid });
 

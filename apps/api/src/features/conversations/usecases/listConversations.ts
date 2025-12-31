@@ -4,6 +4,7 @@ import type { ConversationMembersRepository } from "@/shared/ports/conversationM
 import type { MessageQueryRepository } from "../../messages/ports";
 import type { Message } from "../../messages/domain";
 import type { ConversationRepository } from "../ports";
+import type { ConversationReadsRepository } from "../../reads/ports";
 
 export const ListConversationsInputSchema = z.object({
   userId: UserIdSchema,
@@ -16,12 +17,14 @@ export interface ListConversationsDeps {
   membersRepo: ConversationMembersRepository;
   messageQueryRepo: MessageQueryRepository;
   conversationRepo: ConversationRepository;
+  readsRepo: ConversationReadsRepository;
 }
 
 export type ConversationPreview = {
   conversationId: string;
   title: string | null;
   latestMessages: readonly Message[];
+  unreadCount: number;
 };
 
 export type ListConversationsResult = {
@@ -36,7 +39,7 @@ export const makeListConversations =
   ): Promise<ListConversationsResult> => {
     const conversationIds = await deps.membersRepo.listByUserId(input.userId);
     
-    // 各会話の最新2メッセージを取得
+    // 各会話の最新2メッセージと未読数を取得
     const conversations = await Promise.all(
       conversationIds.map(async (conversationId) => {
         const latestMessages = await deps.messageQueryRepo.listLatestByConversation(
@@ -44,10 +47,20 @@ export const makeListConversations =
           2,
         );
         const title = await deps.conversationRepo.getTitle(conversationId);
+        
+        // 未読数を計算
+        const readCursor = await deps.readsRepo.get(conversationId, input.userId);
+        const lastReadMessageId = readCursor?.lastReadMessageId ?? null;
+        const unreadCount = await deps.messageQueryRepo.countUnread(
+          conversationId,
+          lastReadMessageId,
+        );
+        
         return {
           conversationId: String(conversationId),
           title,
           latestMessages,
+          unreadCount,
         };
       }),
     );

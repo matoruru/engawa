@@ -41,6 +41,20 @@ const app = new Elysia()
     ({ userId }) => handlers.listConversations(userId),
     { auth: true },
   )
+  .get(
+    "/conversations/:conversationId",
+    ({ params, userId }) =>
+      handlers.getConversation(
+        userId,
+        ConversationIdSchema.parse(params.conversationId),
+      ),
+    {
+      auth: true,
+      params: t.Object({
+        conversationId: t.String(),
+      }),
+    },
+  )
   .post(
     "/conversations",
     ({ userId }) => handlers.createConversation(userId),
@@ -49,6 +63,11 @@ const app = new Elysia()
   .get(
     "/me",
     ({ userId }) => handlers.getCurrentUser(userId),
+    { auth: true },
+  )
+  .patch(
+    "/me",
+    ({ body, userId }) => handlers.updateUserProfile(userId, body),
     { auth: true },
   )
   .get(

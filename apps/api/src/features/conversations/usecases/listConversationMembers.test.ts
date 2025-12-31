@@ -66,6 +66,35 @@ class InMemoryUserRepo implements UserRepository {
       .map((id) => this.users.get(String(id)))
       .filter((user): user is User => user !== undefined);
   }
+  async findById(userId: UserId): Promise<User | null> {
+    return this.users.get(String(userId)) || null;
+  }
+  async findByUsername(username: string): Promise<User | null> {
+    for (const user of this.users.values()) {
+      if (user.username === username) {
+        return user;
+      }
+    }
+    return null;
+  }
+  async updateDisplayName(userId: UserId, displayName: string): Promise<void> {
+    const user = this.users.get(String(userId));
+    if (user) {
+      this.users.set(String(userId), { ...user, displayName });
+    }
+  }
+  async updateUsername(userId: UserId, username: string): Promise<void> {
+    const user = this.users.get(String(userId));
+    if (user) {
+      this.users.set(String(userId), { ...user, username });
+    }
+  }
+  async updateAvatarUrl(userId: UserId, avatarUrl: string | null): Promise<void> {
+    const user = this.users.get(String(userId));
+    if (user) {
+      this.users.set(String(userId), { ...user, avatarUrl });
+    }
+  }
 }
 
 // 固定値

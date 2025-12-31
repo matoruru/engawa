@@ -4,6 +4,7 @@ import {
   ClientMessageIdSchema,
   type ConversationId,
   ConversationIdSchema,
+  type MessageId,
   MessageIdSchema,
   type UserId,
   UserIdSchema,
@@ -92,6 +93,9 @@ class InMemoryMessageQueryRepo implements MessageQueryRepository {
 
     return byConv.slice(0, limit).reverse();
   }
+  async countUnread(): Promise<number> {
+    return 0;
+  }
 }
 
 class SpyQueryRepo implements MessageQueryRepository {
@@ -108,6 +112,12 @@ class SpyQueryRepo implements MessageQueryRepository {
     limit: number,
   ): Promise<readonly Message[]> {
     return this.inner.listLatestByConversation(conversationId, limit);
+  }
+  async countUnread(
+    conversationId: ConversationId,
+    afterMessageId: MessageId | null,
+  ): Promise<number> {
+    return this.inner.countUnread(conversationId, afterMessageId);
   }
 }
 

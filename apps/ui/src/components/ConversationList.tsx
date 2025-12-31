@@ -11,6 +11,7 @@ interface ConversationPreview {
     senderId: string;
     createdAt: string;
   }>;
+  unreadCount: number;
 }
 
 interface ConversationListProps {
@@ -71,13 +72,23 @@ export function ConversationList({
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                       <MessageSquare className="h-5 w-5 text-primary" />
+                      {conversation.unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 border-2 border-background" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {conversation.title || `会話 ${conversation.conversationId.slice(0, 8)}`}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {conversation.title || `会話 ${conversation.conversationId.slice(0, 8)}`}
+                        </p>
+                        {conversation.unreadCount > 0 && (
+                          <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                            {conversation.unreadCount}
+                          </span>
+                        )}
+                      </div>
                       {conversation.latestMessages.length > 0 ? (
                         <div className="space-y-0.5 mt-1">
                           {conversation.latestMessages.slice(-2).map((message, idx) => (
@@ -106,12 +117,15 @@ export function ConversationList({
           <button
             onClick={() => {}}
             className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors",
+              "flex-1 flex flex-col items-center justify-center gap-1 py-3 px-4 transition-colors relative",
               "text-primary bg-primary/10"
             )}
           >
             <MessageSquare className="h-5 w-5" />
             <span className="text-xs font-medium">会話</span>
+            {conversations.some(c => c.unreadCount > 0) && (
+              <span className="absolute top-2 right-1/2 translate-x-4 h-2 w-2 rounded-full bg-red-500" />
+            )}
           </button>
           <button
             onClick={onOpenProfile}

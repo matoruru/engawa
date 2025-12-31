@@ -39,6 +39,18 @@ export const WsClientEventSchema = z.discriminatedUnion("type", [
     type: z.literal("read.update"),
     payload: WsUpdateReadCursorPayloadSchema,
   }),
+  z.object({
+    type: z.literal("typing.start"),
+    payload: z.object({
+      conversationId: ConversationIdSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal("typing.stop"),
+    payload: z.object({
+      conversationId: ConversationIdSchema,
+    }),
+  }),
 ]);
 
 export type WsClientEvent = z.infer<typeof WsClientEventSchema>;
@@ -136,6 +148,20 @@ export const WsServerEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("read.updated"),
     payload: WsUpdateReadCursorResultSchema,
+  }),
+  z.object({
+    type: z.literal("typing.started"),
+    payload: z.object({
+      conversationId: ConversationIdSchema,
+      userId: UserIdSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal("typing.stopped"),
+    payload: z.object({
+      conversationId: ConversationIdSchema,
+      userId: UserIdSchema,
+    }),
   }),
 ]);
 export type WsServerEvent = z.infer<typeof WsServerEventSchema>;

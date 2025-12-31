@@ -113,5 +113,67 @@ export const makePostgresUserRepo = (
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
     }));
   },
+
+  findById: async (userId: UserId): Promise<User | null> => {
+    const rows = await db`
+      SELECT id, username, display_name, avatar_url
+      FROM users
+      WHERE id = ${userId}
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) return null;
+
+    const parsed = UserRowSchema.parse(rows[0]);
+    return {
+      id: String(parsed.id),
+      username: String(parsed.username),
+      displayName: String(parsed.display_name || parsed.username),
+      avatarUrl: parsed.avatar_url ? String(parsed.avatar_url) : null,
+    };
+  },
+
+  findByUsername: async (username: string): Promise<User | null> => {
+    const rows = await db`
+      SELECT id, username, display_name, avatar_url
+      FROM users
+      WHERE username = ${username}
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) return null;
+
+    const parsed = UserRowSchema.parse(rows[0]);
+    return {
+      id: String(parsed.id),
+      username: String(parsed.username),
+      displayName: String(parsed.display_name || parsed.username),
+      avatarUrl: parsed.avatar_url ? String(parsed.avatar_url) : null,
+    };
+  },
+
+  updateDisplayName: async (userId: UserId, displayName: string): Promise<void> => {
+    await db`
+      UPDATE users
+      SET display_name = ${displayName}
+      WHERE id = ${userId}
+    `;
+  },
+
+  updateUsername: async (userId: UserId, username: string): Promise<void> => {
+    await db`
+      UPDATE users
+      SET username = ${username}
+      WHERE id = ${userId}
+    `;
+  },
+
+  updateAvatarUrl: async (userId: UserId, avatarUrl: string | null): Promise<void> => {
+    await db`
+      UPDATE users
+      SET avatar_url = ${avatarUrl}
+      WHERE id = ${userId}
+    `;
+  },
 });
 

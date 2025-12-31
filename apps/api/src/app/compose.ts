@@ -20,6 +20,11 @@ import {
   type ListConversationsResult,
 } from "../features/conversations/usecases/listConversations";
 import {
+  makeGetConversation,
+  type GetConversationInput,
+  type GetConversationResult,
+} from "../features/conversations/usecases/getConversation";
+import {
   makeAddMemberToConversation,
   type AddMemberToConversationInput,
   type AddMemberToConversationResult,
@@ -58,6 +63,11 @@ import {
   type UpdateReadCursorResult,
 } from "../features/reads/usecases/updateReadCursor";
 import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
+import {
+  makeUpdateUserProfile,
+  type UpdateUserProfileInput,
+  type UpdateUserProfileResult,
+} from "../features/users/usecases/updateUserProfile";
 import { makePostgresFriendshipsRepo } from "../features/friendships/infra/postgres/friendshipsRepo";
 import {
   makeListFriends,
@@ -106,6 +116,9 @@ export type AppServices = {
   listConversations: (
     input: ListConversationsInput,
   ) => Promise<ListConversationsResult>;
+  getConversation: (
+    input: GetConversationInput,
+  ) => Promise<GetConversationResult>;
   addMemberToConversation: (
     input: AddMemberToConversationInput,
   ) => Promise<AddMemberToConversationResult>;
@@ -123,6 +136,8 @@ export type AppServices = {
   createInvite: (input: CreateInviteInput) => Promise<CreateInviteResult>;
   getInvite: (input: GetInviteInput) => Promise<GetInviteResult>;
   acceptInvite: (input: AcceptInviteInput) => Promise<AcceptInviteResult>;
+  updateUserProfile: (input: UpdateUserProfileInput) => Promise<UpdateUserProfileResult>;
+  userRepo: ReturnType<typeof makePostgresUserRepo>;
 };
 
 export const composeApp = (): AppServices => {
@@ -190,10 +205,16 @@ export const composeApp = (): AppServices => {
     now: () => new Date(),
   });
 
-  const listConversations = makeListConversations({
-    membersRepo,
-    messageQueryRepo,
+    const listConversations = makeListConversations({
+      membersRepo,
+      messageQueryRepo,
+      conversationRepo,
+      readsRepo,
+    });
+
+  const getConversation = makeGetConversation({
     conversationRepo,
+    membersRepo,
   });
 
   const addMemberToConversation = makeAddMemberToConversation({
@@ -256,6 +277,7 @@ export const composeApp = (): AppServices => {
     updateReadCursor,
     createConversation,
     listConversations,
+    getConversation,
     addMemberToConversation,
     listConversationMembers,
     leaveConversation,
@@ -265,5 +287,7 @@ export const composeApp = (): AppServices => {
     createInvite,
     getInvite,
     acceptInvite,
+    updateUserProfile: makeUpdateUserProfile({ userRepo }),
+    userRepo,
   };
 };

@@ -23,6 +23,18 @@ export type WsClientEvent =
         conversationId: string;
         lastReadMessageId: string;
       };
+    }
+  | {
+      type: "typing.start";
+      payload: {
+        conversationId: string;
+      };
+    }
+  | {
+      type: "typing.stop";
+      payload: {
+        conversationId: string;
+      };
     };
 
 export type WsServerEvent =
@@ -54,6 +66,20 @@ export type WsServerEvent =
         | { kind: "updated"; cursor: WsReadCursor }
         | { kind: "ignored"; cursor: WsReadCursor | null }
         | { kind: "forbidden"; reason: "NOT_A_MEMBER" };
+    }
+  | {
+      type: "typing.started";
+      payload: {
+        conversationId: string;
+        userId: string;
+      };
+    }
+  | {
+      type: "typing.stopped";
+      payload: {
+        conversationId: string;
+        userId: string;
+      };
     }
   | {
       type: "*";

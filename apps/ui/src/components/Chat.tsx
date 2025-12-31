@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
 import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
-import { Send, ArrowLeft, UserPlus, LogOut } from "lucide-react";
+import { Send, ArrowLeft, UserPlus, LogOut, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { v7 as uuidv7 } from "uuid";
 
@@ -56,8 +56,17 @@ export function Chat({
   const [conversationTitle, setConversationTitle] = useState<string | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [memberAvatars, setMemberAvatars] = useState<Map<string, { displayName: string; avatarUrl: string | null }>>(new Map());
+  const [members, setMembers] = useState<Array<{
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  }>>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<Map<string, number>>(new Map());
 
   const app = useMemo(
     () =>
@@ -85,12 +94,9 @@ export function Chat({
   useEffect(() => {
     const loadTitle = async () => {
       try {
-        const response = await fetch(`${apiUrl}/conversations/${conversationId}`, {
-          credentials: "include",
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setConversationTitle(data.title || `会話 ${conversationId.slice(0, 8)}`);
+        const response = await app.conversations({ conversationId }).get();
+        if (response.data && "conversationId" in response.data) {
+          setConversationTitle(response.data.title || `会話 ${conversationId.slice(0, 8)}`);
         } else {
           setConversationTitle(`会話 ${conversationId.slice(0, 8)}`);
         }
@@ -100,7 +106,36 @@ export function Chat({
       }
     };
     loadTitle();
-  }, [conversationId, apiUrl]);
+  }, [conversationId, app]);
+
+  // メンバー情報を取得
+  useEffect(() => {
+    const loadMembers = async () => {
+      try {
+        const response = await app.conversations({ conversationId }).members.get();
+        if (response.data && "members" in response.data) {
+          const members = response.data.members as Array<{
+            id: string;
+            username: string;
+            displayName: string;
+            avatarUrl: string | null;
+          }>;
+          const avatarMap = new Map<string, { displayName: string; avatarUrl: string | null }>();
+          members.forEach((member) => {
+            avatarMap.set(member.id, {
+              displayName: member.displayName,
+              avatarUrl: member.avatarUrl,
+            });
+          });
+          setMemberAvatars(avatarMap);
+          setMembers(members);
+        }
+      } catch (error) {
+        console.error("Failed to load members:", error);
+      }
+    };
+    loadMembers();
+  }, [conversationId, app]);
 
   // 初期メッセージの読み込み
   useEffect(() => {
@@ -116,6 +151,18 @@ export function Chat({
           const apiMessages = response.data.messages;
           const wsMessages: WsMessage[] = Array.from(apiMessages).map(convertApiMessageToWsMessage);
           setMessages(wsMessages);
+          
+          // メッセージを読み込んだら、最新のメッセージIDでread cursorを更新
+          if (wsMessages.length > 0) {
+            const latestMessage = wsMessages[wsMessages.length - 1];
+            ws.send({
+              type: "read.update",
+              payload: {
+                conversationId,
+                lastReadMessageId: latestMessage.messageId,
+              },
+            });
+          }
         }
       } catch (error) {
         console.error("Failed to load messages:", error);
@@ -259,9 +306,106 @@ export function Chat({
     }
   };
 
-  const getInitials = (userId: string) => {
-    return userId.slice(0, 2).toUpperCase();
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
+
+  // タイピング開始/停止の処理
+  useEffect(() => {
+    if (!ws.isConnected) return;
+
+    const handleTypingStart = () => {
+      if (input.trim()) {
+        ws.send({
+          type: "typing.start",
+          payload: { conversationId },
+        });
+      }
+    };
+
+    const handleTypingStop = () => {
+      ws.send({
+        type: "typing.stop",
+        payload: { conversationId },
+      });
+    };
+
+    // デバウンス: 500ms後にタイピング開始を送信
+    const existingTimeout = typingTimeoutRef.current.get(conversationId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    if (input.trim()) {
+      const timeoutId = window.setTimeout(handleTypingStart, 500);
+      typingTimeoutRef.current.set(conversationId, timeoutId);
+    } else {
+      handleTypingStop();
+    }
+
+    // 3秒後に自動的にタイピング停止を送信
+    const stopTimeoutId = window.setTimeout(() => {
+      if (input.trim()) {
+        handleTypingStop();
+      }
+    }, 3000);
+
+    return () => {
+      const timeoutId = typingTimeoutRef.current.get(conversationId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      clearTimeout(stopTimeoutId);
+    };
+  }, [input, conversationId, ws.isConnected, ws]);
+
+  // タイピングイベントの受信
+  useEffect(() => {
+    if (!ws.isConnected) return;
+
+    const unsubscribeTypingStarted = ws.on("typing.started", (event) => {
+      if (event.payload.conversationId === conversationId && event.payload.userId !== currentUserId) {
+        setTypingUsers((prev) => new Set(prev).add(event.payload.userId));
+        // 3秒後に自動的にタイピング停止
+        const timeoutId = window.setTimeout(() => {
+          setTypingUsers((prev) => {
+            const next = new Set(prev);
+            next.delete(event.payload.userId);
+            return next;
+          });
+        }, 3000);
+        const existingTimeout = typingTimeoutRef.current.get(event.payload.userId);
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+        typingTimeoutRef.current.set(event.payload.userId, timeoutId);
+      }
+    });
+
+    const unsubscribeTypingStopped = ws.on("typing.stopped", (event) => {
+      if (event.payload.conversationId === conversationId && event.payload.userId !== currentUserId) {
+        setTypingUsers((prev) => {
+          const next = new Set(prev);
+          next.delete(event.payload.userId);
+          return next;
+        });
+        const timeoutId = typingTimeoutRef.current.get(event.payload.userId);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeTypingStarted();
+      unsubscribeTypingStopped();
+    };
+  }, [ws.isConnected, conversationId, currentUserId, ws]);
 
   const handleLeaveConversation = async () => {
     if (!confirm("この会話から脱会しますか？")) {
@@ -320,8 +464,35 @@ export function Chat({
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* ヘッダー */}
-      <div className="border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
+      <div className="border-b border-border bg-card">
+        {/* メンバー一覧 */}
+        <div className="px-4 py-2 border-b border-border">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {members.map((member) => {
+              const isOwn = member.id === currentUserId;
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-2 shrink-0 px-2 py-1 rounded-lg bg-muted/50"
+                >
+                  <Avatar className="h-6 w-6">
+                    {member.avatarUrl ? (
+                      <AvatarImage src={member.avatarUrl} alt={member.displayName} />
+                    ) : null}
+                    <AvatarFallback className="text-xs">
+                      {getInitials(member.displayName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs font-medium">
+                    {isOwn ? "あなた" : member.displayName}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {onBack && (
               <Button
@@ -354,13 +525,14 @@ export function Chat({
               </div>
             ) : (
               <h1 
-                className="text-lg font-semibold cursor-pointer hover:text-primary"
+                className="text-lg font-semibold cursor-pointer hover:text-primary flex items-center gap-2"
                 onClick={() => {
                   setTitleInput(conversationTitle || "");
                   setIsEditingTitle(true);
                 }}
               >
-                {conversationTitle || `会話 ${conversationId.slice(0, 8)}`}
+                <span>{conversationTitle || `会話 ${conversationId.slice(0, 8)}`}</span>
+                <Pencil className="h-4 w-4 text-muted-foreground" />
               </h1>
             )}
           </div>
@@ -385,6 +557,7 @@ export function Chat({
             </Button>
           </div>
         </div>
+        </div>
       </div>
 
       {/* メッセージリスト */}
@@ -401,25 +574,37 @@ export function Chat({
           ) : (
             messages.map((message) => {
               const isOwn = message.senderId === currentUserId;
+              const member = memberAvatars.get(message.senderId);
+              const displayName = member?.displayName || message.senderId;
+              
               return (
                 <div
                   key={message.messageId}
                   className={cn(
-                    "flex gap-3",
-                    isOwn ? "justify-end" : "justify-start"
+                    "flex gap-3 w-full",
+                    isOwn ? "flex-row-reverse justify-end" : "flex-row justify-start"
                   )}
                 >
                   {!isOwn && (
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(message.senderId)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <Avatar className="h-8 w-8">
+                        {member?.avatarUrl ? (
+                          <AvatarImage src={member.avatarUrl} alt={displayName} />
+                        ) : null}
+                        <AvatarFallback className="text-xs">
+                          {getInitials(displayName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-muted-foreground max-w-[60px] truncate text-center">
+                        {displayName}
+                      </span>
+                    </div>
                   )}
                   <div
                     className={cn(
-                      "flex flex-col gap-1 max-w-[80%] sm:max-w-[70%]",
-                      isOwn ? "items-end" : "items-start"
+                      "flex flex-col gap-1",
+                      isOwn ? "items-end" : "items-start",
+                      "max-w-[80%] sm:max-w-[70%]"
                     )}
                   >
                     <div
@@ -439,15 +624,26 @@ export function Chat({
                     </span>
                   </div>
                   {isOwn && (
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(message.senderId)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="shrink-0 w-8" />
                   )}
                 </div>
               );
             })
+          )}
+          {typingUsers.size > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2">
+              <div className="flex gap-1">
+                <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+                <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+                <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {Array.from(typingUsers).map((userId) => {
+                  const member = memberAvatars.get(userId);
+                  return member?.displayName || userId;
+                }).join(", ")}がタイプ中...
+              </span>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>

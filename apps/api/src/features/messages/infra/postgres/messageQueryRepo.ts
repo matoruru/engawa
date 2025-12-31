@@ -84,4 +84,29 @@ export const makePostgresMessageQueryRepo = (
 
     return messages;
   },
+
+  countUnread: async (
+    conversationId: ConversationId,
+    afterMessageId: MessageId | null,
+  ): Promise<number> => {
+    if (afterMessageId === null) {
+      // lastReadMessageIdがnullの場合は、全てのメッセージが未読
+      const rows = await db`
+        SELECT COUNT(*) as count
+        FROM messages
+        WHERE conversation_id = ${conversationId}
+      `;
+      const count = rows[0] as { count: bigint };
+      return Number(count.count);
+    }
+
+    const rows = await db`
+      SELECT COUNT(*) as count
+      FROM messages
+      WHERE conversation_id = ${conversationId}
+        AND message_id > ${afterMessageId}
+    `;
+    const count = rows[0] as { count: bigint };
+    return Number(count.count);
+  },
 });

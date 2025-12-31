@@ -34,6 +34,8 @@ import { makeCreateConversation } from "../../../src/features/conversations/usec
 import { makeListConversations } from "../../../src/features/conversations/usecases/listConversations";
 import { makeAddMemberToConversation } from "../../../src/features/conversations/usecases/addMemberToConversation";
 import { makeListConversationMembers } from "../../../src/features/conversations/usecases/listConversationMembers";
+import { makeLeaveConversation } from "../../../src/features/conversations/usecases/leaveConversation";
+import { makeUpdateConversationTitle } from "../../../src/features/conversations/usecases/updateConversationTitle";
 import { MessageTextSchema } from "../../../src/features/messages/domain";
 import { makePostgresMessageQueryRepo } from "../../../src/features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresMessageRepo } from "../../../src/features/messages/infra/postgres/messageRepo";
@@ -59,6 +61,7 @@ import {
   seedMember,
   seedUser,
 } from "../../helpers/seed";
+import { makeUpdateUserProfile } from "src/features/users/usecases/updateUserProfile";
 
 const must = (v: string | undefined, name: string): string => {
   if (!v) throw new Error(`Missing env: ${name}`);
@@ -286,6 +289,8 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
     const listConversations = makeListConversations({
       membersRepo,
       messageQueryRepo: queryRepo,
+      conversationRepo,
+      readsRepo,
     });
 
     const addMemberToConversation = makeAddMemberToConversation({
@@ -294,6 +299,15 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
 
     const listConversationMembers = makeListConversationMembers({
       userRepo,
+      membersRepo,
+    });
+
+    const leaveConversation = makeLeaveConversation({
+      membersRepo,
+    });
+
+    const updateConversationTitle = makeUpdateConversationTitle({
+      conversationRepo,
       membersRepo,
     });
 
@@ -330,6 +344,10 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       now: () => new Date(),
     });
 
+    const updateUserProfile = makeUpdateUserProfile({
+      userRepo,
+    });
+
     const svc = {
       db,
       membersRepo,
@@ -341,11 +359,15 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       listConversations,
       addMemberToConversation,
       listConversationMembers,
+      leaveConversation,
+      updateConversationTitle,
       listFriends,
       removeFriend,
       createInvite,
       getInvite,
       acceptInvite,
+      updateUserProfile,
+      userRepo,
     };
 
     // @ts-expect-error Elysiaの型が複雑なので無視する

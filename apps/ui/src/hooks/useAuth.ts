@@ -113,7 +113,7 @@ export function useAuth(apiUrl: string) {
   const signInWithGoogle = () => {
     authClient.signIn.social({
       provider: "google",
-      callbackURL: window.location.origin,
+      callbackURL: typeof window !== "undefined" ? window.location.origin : "",
     });
   };
 

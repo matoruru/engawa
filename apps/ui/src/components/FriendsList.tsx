@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { UserMinus, Users, Link2, Copy, Check } from "lucide-react";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
+import { useLocation } from "../hooks/useLocation";
 
 interface Friend {
   id: string;
@@ -19,12 +20,14 @@ interface FriendsListProps {
 }
 
 export function FriendsList({ apiUrl }: FriendsListProps) {
+  const location = useLocation();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
 
   const app = treaty<AppContract>(apiUrl, {
     fetch: {
@@ -62,7 +65,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
       setIsCreatingInvite(true);
       const response = await app.invites.post();
       if (response.data && "token" in response.data && "inviteUrl" in response.data) {
-        const baseUrl = window.location.origin;
+        const baseUrl = location.getOrigin();
         const fullUrl = `${baseUrl}${response.data.inviteUrl}`;
         setInviteUrl(fullUrl);
       }
@@ -81,10 +84,16 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
     }
   };
 
-  const handleRemoveFriend = async (friendId: string) => {
+  const handleRemoveFriend = async (friend: Friend) => {
+    setFriendToRemove(friend);
+  };
+
+  const confirmRemoveFriend = async () => {
+    if (!friendToRemove) return;
+    
     try {
-      setIsAdding(friendId);
-      const response = await fetch(`${apiUrl}/friends/${friendId}`, {
+      setIsAdding(friendToRemove.id);
+      const response = await fetch(`${apiUrl}/friends/${friendToRemove.id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -98,6 +107,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
       console.error("Failed to remove friend:", error);
     } finally {
       setIsAdding(null);
+      setFriendToRemove(null);
     }
   };
 
@@ -201,7 +211,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
                       </div>
                     </div>
                     <Button
-                      onClick={() => handleRemoveFriend(friend.id)}
+                      onClick={() => handleRemoveFriend(friend)}
                       disabled={isAdding === friend.id}
                       size="sm"
                       variant="ghost"
@@ -214,7 +224,35 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
             )}
           </div>
         </div>
-      </ScrollArea>
+        </ScrollArea>
+
+      {/* 友達削除確認ダイアログ */}
+      {friendToRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">友達を削除</h2>
+            <p className="text-sm text-muted-foreground">
+              本当に<span className="font-medium text-foreground">{friendToRemove.displayName}</span>さんと友達をやめますか？
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                onClick={() => setFriendToRemove(null)}
+                variant="outline"
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={confirmRemoveFriend}
+                disabled={isAdding === friendToRemove.id}
+                variant="destructive"
+                className="bg-red-500 hover:bg-red-600"
+              >
+                {isAdding === friendToRemove.id ? "削除中..." : "削除"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

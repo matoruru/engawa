@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { UserCheck, AlertCircle } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useLocation } from "../hooks/useLocation";
 
 interface AcceptInviteProps {
   token: string;
@@ -11,6 +12,7 @@ interface AcceptInviteProps {
 }
 
 export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
+  const location = useLocation();
   const [invite, setInvite] = useState<{
     token: string;
     inviterId: string;
@@ -207,7 +209,9 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
           </CardHeader>
           <CardContent>
             <Button
-              onClick={() => window.location.href = "/"}
+              onClick={() => {
+                location.navigate("/");
+              }}
               className="w-full"
             >
               ホームに戻る
@@ -263,7 +267,9 @@ export function AcceptInvite({ token, apiUrl }: AcceptInviteProps) {
                 招待を受け入れるにはログインが必要です
               </p>
               <Button
-                onClick={() => window.location.href = "/"}
+                onClick={() => {
+                location.navigate("/");
+              }}
                 className="w-full"
               >
                 ログイン

@@ -8,6 +8,7 @@ import { SyncMessagesInputSchema } from "../features/messages/usecases/syncMessa
 import { UpdateReadCursorInputSchema } from "../features/reads/usecases/updateReadCursor";
 import { CreateConversationInputSchema } from "../features/conversations/usecases/createConversation";
 import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
+import { GetConversationInputSchema } from "../features/conversations/usecases/getConversation";
 import { AddMemberToConversationInputSchema } from "../features/conversations/usecases/addMemberToConversation";
 import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
 import { LeaveConversationInputSchema } from "../features/conversations/usecases/leaveConversation";
@@ -66,6 +67,21 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     throw new Error("Unexpected result from listConversations");
   },
 
+  getConversation: async (userId: UserId, conversationId: ConversationId) => {
+    const input = GetConversationInputSchema.parse({ userId, conversationId });
+    const result = await svc.getConversation(input);
+    if (result.kind === "ok") {
+      return { conversationId: result.conversationId, title: result.title };
+    }
+    if (result.kind === "notFound") {
+      return { error: "NOT_FOUND" };
+    }
+    if (result.kind === "forbidden") {
+      return { error: "FORBIDDEN", reason: result.reason };
+    }
+    throw new Error("Unexpected result from getConversation");
+  },
+
   createConversation: async (userId: UserId) => {
     const input = CreateConversationInputSchema.parse({ userId });
     const result = await svc.createConversation(input);
@@ -76,7 +92,35 @@ export const makeHttpHandlers = (svc: AppServices) => ({
   },
 
   getCurrentUser: async (userId: UserId) => {
-    return { userId };
+    const user = await svc.userRepo.findById(userId);
+    if (!user) {
+      return { error: "USER_NOT_FOUND" };
+    }
+    return { user };
+  },
+
+  updateUserProfile: async (userId: UserId, body: unknown) => {
+    const UpdateUserProfileHttpBodySchema = z.object({
+      displayName: z.string().min(1).max(100).optional(),
+      username: z.string().min(1).max(50).optional(),
+      avatarUrl: z.string().nullable().optional(),
+    });
+    const b = UpdateUserProfileHttpBodySchema.parse(body);
+    const result = await svc.updateUserProfile({
+      userId,
+      displayName: b.displayName,
+      username: b.username,
+      avatarUrl: b.avatarUrl,
+    });
+    
+    if (result.kind === "updated") {
+      return { success: true };
+    } else if (result.kind === "conflict") {
+      return { success: false, error: result.reason };
+    } else if (result.kind === "notFound") {
+      return { success: false, error: "USER_NOT_FOUND" };
+    }
+    throw new Error("Unexpected result from updateUserProfile");
   },
 
   searchUsers: async (userId: UserId, query: string) => {

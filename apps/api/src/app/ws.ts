@@ -251,6 +251,31 @@ export const makeWsApp = (svc: AppServices) => {
         ws.send(wsEncode({ type: "read.updated", payload: res }));
         return;
       }
+
+      if (evt.type === "typing.start") {
+        join(evt.payload.conversationId, ws.id);
+        // 自分以外にタイピング開始を通知
+        broadcast(evt.payload.conversationId, {
+          type: "typing.started",
+          payload: {
+            conversationId: evt.payload.conversationId,
+            userId,
+          },
+        });
+        return;
+      }
+
+      if (evt.type === "typing.stop") {
+        // 自分以外にタイピング停止を通知
+        broadcast(evt.payload.conversationId, {
+          type: "typing.stopped",
+          payload: {
+            conversationId: evt.payload.conversationId,
+            userId,
+          },
+        });
+        return;
+      }
     },
 
     close(ws) {

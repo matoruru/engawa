@@ -27,4 +27,10 @@ export interface MessageQueryRepository {
     conversationId: ConversationId,
     limit: number,
   ): Promise<readonly Message[]>;
+  
+  // 未読メッセージ数を取得
+  countUnread(
+    conversationId: ConversationId,
+    afterMessageId: MessageId | null,
+  ): Promise<number>;
 }

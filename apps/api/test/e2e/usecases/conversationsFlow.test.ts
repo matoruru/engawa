@@ -19,6 +19,7 @@ import { makeListConversations } from "../../../src/features/conversations/useca
 import { makeAddMemberToConversation } from "../../../src/features/conversations/usecases/addMemberToConversation";
 import { makeListConversationMembers } from "../../../src/features/conversations/usecases/listConversationMembers";
 import { makePostgresMessageQueryRepo } from "../../../src/features/messages/infra/postgres/messageQueryRepo";
+import { makePostgresConversationReadsRepo } from "../../../src/features/reads/infra/postgres/conversationReadsRepo";
 import {
   resetDb,
   seedUser,
@@ -69,10 +70,12 @@ describe("e2e/usecases: conversations flow", () => {
     });
 
     const messageQueryRepo = makePostgresMessageQueryRepo(db);
+    const readsRepo = makePostgresConversationReadsRepo(db);
     const listConversations = makeListConversations({
       membersRepo,
       messageQueryRepo,
       conversationRepo,
+      readsRepo,
     });
 
     // 会話を作成
