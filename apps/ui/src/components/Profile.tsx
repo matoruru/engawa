@@ -23,7 +23,7 @@ interface ProfileProps {
   apiUrl: string;
 }
 
-export function Profile({ user, onBack, onSignOut, apiUrl }: ProfileProps) {
+export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<"profile" | "friends">("profile");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
