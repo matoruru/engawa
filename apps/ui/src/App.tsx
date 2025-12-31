@@ -14,7 +14,7 @@ function App() {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const { user, appUserId, isLoading, refreshSession, signOut } = useAuth(apiUrl);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<Array<{ conversationId: string; title: string | null; latestMessages: Array<{ messageText: string; senderId: string; createdAt: string }>; unreadCount: number }>>([]);
+  const [conversations, setConversations] = useState<Array<{ conversationId: string; title: string | null; latestMessages: Array<{ messageText: string; senderId: string; senderDisplayName: string; createdAt: string }>; unreadCount: number }>>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
