@@ -1,7 +1,7 @@
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
 import { Check, Copy, Link2, UserMinus, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "../hooks/useLocation";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -29,35 +29,31 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
   const [copied, setCopied] = useState(false);
   const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
 
-  const app = treaty<AppContract>(apiUrl, {
-    fetch: {
-      credentials: "include",
-    },
-  });
-
-  const loadFriends = async () => {
-    try {
-      setIsLoading(true);
-      const response = await app.friends.get();
-      if (response.data && "friends" in response.data) {
-        const friendsData = response.data.friends as Array<{
-          id: string;
-          username: string;
-          displayName: string;
-          avatarUrl: string | null;
-        }>;
-        setFriends(friendsData);
-      }
-    } catch (error) {
-      console.error("Failed to load friends:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const app = useMemo(
+    () =>
+      treaty<AppContract>(apiUrl, {
+        fetch: { credentials: "include" },
+      }),
+    [apiUrl],
+  );
 
   useEffect(() => {
+    const loadFriends = async () => {
+      try {
+        setIsLoading(true);
+        const response = await app.friends.get();
+        if (response.data && "friends" in response.data) {
+          setFriends(response.data.friends as Friend[]);
+        }
+      } catch (e) {
+        console.error("Failed to load friends:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
     loadFriends();
-  }, []);
+  }, [app]);
 
   const handleCreateInvite = async () => {
     try {
@@ -103,7 +99,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          await loadFriends();
+          await app.friends.get();
         }
       }
     } catch (error) {
