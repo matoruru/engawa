@@ -5,11 +5,11 @@ import { Login } from "./components/Login";
 import { ConversationList } from "./components/ConversationList";
 import { Profile } from "./components/Profile";
 import { AcceptInvite } from "./components/AcceptInvite";
-import { BottomTabBar } from "./components/BottomTabBar";
 import { useAuth } from "./hooks/useAuth";
 import { ConversationsProvider, useConversations } from "./contexts/ConversationsContext";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@kaiwa/contracts";
+import { TabLayout } from "./components/TabLayout";
 
 type ConversationPreview = {
   conversationId: string;
@@ -123,13 +123,12 @@ function AppContent() {
         <Route
           path="/"
           element={
-            <>
+            <TabLayout>
               <ConversationList
                 currentUserId={appUserId || ""}
                 onCreateConversation={handleCreateConversation}
               />
-              <BottomTabBar />
-            </>
+            </TabLayout>
           }
         />
         <Route
@@ -146,15 +145,14 @@ function AppContent() {
         <Route
           path="/profile"
           element={
-            <>
+            <TabLayout>
               <Profile
                 user={user}
                 onBack={() => navigate("/")}
                 onSignOut={handleSignOut}
                 apiUrl={apiUrl}
               />
-              <BottomTabBar />
-            </>
+            </TabLayout>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
