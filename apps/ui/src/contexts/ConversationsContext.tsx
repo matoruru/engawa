@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 type ConversationPreview = {
   conversationId: string;
@@ -15,43 +22,70 @@ type ConversationPreview = {
 interface ConversationsContextType {
   conversations: ConversationPreview[];
   setConversations: (conversations: ConversationPreview[]) => void;
-  updateConversation: (conversationId: string, updates: Partial<ConversationPreview>) => void;
+  updateConversation: (
+    conversationId: string,
+    updates: Partial<ConversationPreview>,
+  ) => void;
   updateUnreadCount: (conversationId: string, unreadCount: number) => void;
   totalUnreadCount: number;
   hasUnreadMessages: boolean;
 }
 
-const ConversationsContext = createContext<ConversationsContextType | undefined>(undefined);
+const ConversationsContext = createContext<
+  ConversationsContextType | undefined
+>(undefined);
 
 export function ConversationsProvider({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
 
-  const updateConversation = useCallback((conversationId: string, updates: Partial<ConversationPreview>) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.conversationId === conversationId ? { ...c, ...updates } : c))
-    );
-  }, []);
+  const updateConversation = useCallback(
+    (conversationId: string, updates: Partial<ConversationPreview>) => {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversationId === conversationId ? { ...c, ...updates } : c,
+        ),
+      );
+    },
+    [],
+  );
 
-  const updateUnreadCount = useCallback((conversationId: string, unreadCount: number) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.conversationId === conversationId ? { ...c, unreadCount } : c))
-    );
-  }, []);
+  const updateUnreadCount = useCallback(
+    (conversationId: string, unreadCount: number) => {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversationId === conversationId ? { ...c, unreadCount } : c,
+        ),
+      );
+    },
+    [],
+  );
 
-  const totalUnreadCount = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  const totalUnreadCount = conversations.reduce(
+    (sum, c) => sum + c.unreadCount,
+    0,
+  );
   const hasUnreadMessages = totalUnreadCount > 0;
 
+  const value = useMemo(
+    () => ({
+      conversations,
+      setConversations,
+      updateConversation,
+      updateUnreadCount,
+      totalUnreadCount,
+      hasUnreadMessages,
+    }),
+    [
+      conversations,
+      updateConversation,
+      updateUnreadCount,
+      totalUnreadCount,
+      hasUnreadMessages,
+    ],
+  );
+
   return (
-    <ConversationsContext.Provider
-      value={{
-        conversations,
-        setConversations,
-        updateConversation,
-        updateUnreadCount,
-        totalUnreadCount,
-        hasUnreadMessages,
-      }}
-    >
+    <ConversationsContext.Provider value={value}>
       {children}
     </ConversationsContext.Provider>
   );
@@ -60,8 +94,9 @@ export function ConversationsProvider({ children }: { children: ReactNode }) {
 export function useConversations() {
   const context = useContext(ConversationsContext);
   if (context === undefined) {
-    throw new Error("useConversations must be used within a ConversationsProvider");
+    throw new Error(
+      "useConversations must be used within a ConversationsProvider",
+    );
   }
   return context;
 }
-

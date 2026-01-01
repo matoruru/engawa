@@ -42,7 +42,12 @@ function AppContent() {
   const apiUrl = constants.API_URL;
   const { user, appUserId, isLoading, refreshSession, signOut } =
     useAuth(apiUrl);
-  const { conversations, setConversations, updateUnreadCount, totalUnreadCount } = useConversations();
+  const {
+    conversations,
+    setConversations,
+    updateUnreadCount,
+    totalUnreadCount,
+  } = useConversations();
   const navigate = useNavigate();
   const location = useLocation();
   const currentConversationIdRef = useRef<string | null>(null);
@@ -82,7 +87,9 @@ function AppContent() {
       // 現在表示中の会話でない場合、未読数を増やす
       if (conversationId !== currentConversationId) {
         setConversations((prev) => {
-          const conversation = prev.find((c) => c.conversationId === conversationId);
+          const conversation = prev.find(
+            (c) => c.conversationId === conversationId,
+          );
           if (conversation) {
             // 未読数を増やす
             const newUnreadCount = conversation.unreadCount + 1;
@@ -112,19 +119,17 @@ function AppContent() {
       }
 
       // 現在表示中の会話でない場合、または自分が送信したメッセージでない場合のみ通知
-      if (
-        conversationId !== currentConversationId &&
-        senderId !== appUserId
-      ) {
+      if (conversationId !== currentConversationId && senderId !== appUserId) {
         // 会話情報を取得（更新後の最新値）
         setTimeout(() => {
           const conversation = conversationsRef.current.find(
             (c) => c.conversationId === conversationId,
           );
-          const title = conversation?.title || `会話 ${conversationId.slice(0, 8)}`;
-          const senderName = conversation?.latestMessages.find(
-            (m) => m.senderId === senderId,
-          )?.senderDisplayName || "誰か";
+          const title =
+            conversation?.title || `会話 ${conversationId.slice(0, 8)}`;
+          const senderName =
+            conversation?.latestMessages.find((m) => m.senderId === senderId)
+              ?.senderDisplayName || "誰か";
 
           showNotification(`${senderName}: ${messageText}`, {
             body: title,

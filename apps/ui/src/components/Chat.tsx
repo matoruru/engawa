@@ -535,10 +535,11 @@ export function Chat({
                         src={member.avatarUrl}
                         alt={member.displayName}
                       />
-                    ) : null}
-                    <AvatarFallback className="text-xs">
-                      {getInitials(member.displayName)}
-                    </AvatarFallback>
+                    ) : (
+                      <AvatarFallback className="text-xs">
+                        {getInitials(member.displayName)}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                   <span className="text-xs font-medium">
                     {isOwn ? "あなた" : member.displayName}
@@ -547,8 +548,6 @@ export function Chat({
               );
             })}
           </div>
-        </div>
-        <div className="px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               {onBack && (

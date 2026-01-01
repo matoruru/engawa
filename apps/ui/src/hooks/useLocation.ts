@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**
  * ブラウザのLocation APIをラップしたカスタムフック
@@ -22,7 +22,7 @@ export function useLocation() {
   // pushStateの変更を監視するためにhistory.pushStateをラップ
   useEffect(() => {
     const originalPushState = window.history.pushState;
-    window.history.pushState = function(...args) {
+    window.history.pushState = (...args) => {
       originalPushState.apply(window.history, args);
       // 状態を即座に更新
       setPathname(window.location.pathname);
@@ -39,7 +39,7 @@ export function useLocation() {
     // 状態を即座に更新（pushStateのラップで監視されるが、念のため明示的に更新）
     setPathname(path);
     setSearch("");
-    
+
     // カスタムイベントを発火して他のコンポーネントに通知
     window.dispatchEvent(new PopStateEvent("popstate"));
   }, []);
@@ -53,12 +53,14 @@ export function useLocation() {
     return window.location.origin;
   }, []);
 
-  return {
-    pathname,
-    search,
-    navigate,
-    getSearchParam,
-    getOrigin,
-  };
+  return useMemo(
+    () => ({
+      pathname,
+      search,
+      navigate,
+      getSearchParam,
+      getOrigin,
+    }),
+    [pathname, search, navigate, getSearchParam, getOrigin],
+  );
 }
-

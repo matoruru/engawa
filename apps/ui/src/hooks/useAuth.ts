@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
-import { createBetterAuthClient } from "../lib/authClient";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createBetterAuthClient } from "../lib/authClient";
 
 interface User {
   id: string;
@@ -22,15 +22,15 @@ export function useAuth(apiUrl: string) {
           credentials: "include",
         },
       }),
-    [apiUrl]
+    [apiUrl],
   );
 
   const authClient = useMemo(
     () => createBetterAuthClient(`${apiUrl}/api/auth`),
-    [apiUrl]
+    [apiUrl],
   );
 
-  const fetchAppUserId = async () => {
+  const fetchAppUserId = useCallback(async () => {
     try {
       const meResponse = await app.me.get();
       if (meResponse.data && "user" in meResponse.data) {
@@ -42,9 +42,9 @@ export function useAuth(apiUrl: string) {
       console.error("Failed to get app user ID:", error);
       setAppUserId(null);
     }
-  };
+  }, [app]);
 
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const session = await authClient.getSession();
       if (session?.data?.user) {
@@ -67,82 +67,93 @@ export function useAuth(apiUrl: string) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [authClient, fetchAppUserId]);
 
   useEffect(() => {
     checkSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiUrl]);
+  }, [checkSession]);
 
-  const signInWithEmail = async (email: string, password: string) => {
-    try {
-      const result = await authClient.signIn.email({
-        email,
-        password,
-      });
-
-      if (result.error) {
-        return { success: false, error: result.error.message || "ログインに失敗しました" };
-      }
-
-      if (result.data?.user) {
-        const user = result.data.user;
-        setUser({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image ?? undefined,
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const result = await authClient.signIn.email({
+          email,
+          password,
         });
-        await fetchAppUserId();
-        return { success: true };
+
+        if (result.error) {
+          return {
+            success: false,
+            error: result.error.message || "ログインに失敗しました",
+          };
+        }
+
+        if (result.data?.user) {
+          const user = result.data.user;
+          setUser({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image ?? undefined,
+          });
+          await fetchAppUserId();
+          return { success: true };
+        }
+
+        return { success: false, error: "ログインに失敗しました" };
+      } catch (error) {
+        console.error("Failed to sign in:", error);
+        return { success: false, error: "ログインに失敗しました" };
       }
+    },
+    [authClient, fetchAppUserId],
+  );
 
-      return { success: false, error: "ログインに失敗しました" };
-    } catch (error) {
-      console.error("Failed to sign in:", error);
-      return { success: false, error: "ログインに失敗しました" };
-    }
-  };
-
-  const signUpWithEmail = async (email: string, password: string, name: string) => {
-    try {
-      const result = await authClient.signUp.email({
-        email,
-        password,
-        name,
-      });
-
-      if (result.error) {
-        return { success: false, error: result.error.message || "登録に失敗しました" };
-      }
-
-      if (result.data?.user) {
-        const user = result.data.user;
-        setUser({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image ?? undefined,
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string, name: string) => {
+      try {
+        const result = await authClient.signUp.email({
+          email,
+          password,
+          name,
         });
-        await fetchAppUserId();
-        return { success: true };
+
+        if (result.error) {
+          return {
+            success: false,
+            error: result.error.message || "登録に失敗しました",
+          };
+        }
+
+        if (result.data?.user) {
+          const user = result.data.user;
+          setUser({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image ?? undefined,
+          });
+          await fetchAppUserId();
+          return { success: true };
+        }
+
+        return { success: false, error: "登録に失敗しました" };
+      } catch (error) {
+        console.error("Failed to sign up:", error);
+        return { success: false, error: "登録に失敗しました" };
       }
+    },
+    [authClient, fetchAppUserId],
+  );
 
-      return { success: false, error: "登録に失敗しました" };
-    } catch (error) {
-      console.error("Failed to sign up:", error);
-      return { success: false, error: "登録に失敗しました" };
-    }
-  };
-
-  const signInWithGoogle = () => {
+  const signInWithGoogle = useCallback(() => {
     authClient.signIn.social({
       provider: "google",
       callbackURL: typeof window !== "undefined" ? window.location.origin : "",
     });
-  };
+  }, [authClient]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       await authClient.signOut();
       setUser(null);
@@ -150,17 +161,28 @@ export function useAuth(apiUrl: string) {
     } catch (error) {
       console.error("Failed to sign out:", error);
     }
-  };
+  }, [authClient]);
 
-  return {
-    user,
-    appUserId,
-    isLoading,
-    signInWithEmail,
-    signUpWithEmail,
-    signInWithGoogle,
-    signOut,
-    refreshSession: checkSession,
-  };
+  return useMemo(
+    () => ({
+      user,
+      appUserId,
+      isLoading,
+      signInWithEmail,
+      signUpWithEmail,
+      signInWithGoogle,
+      signOut,
+      refreshSession: checkSession,
+    }),
+    [
+      user,
+      appUserId,
+      isLoading,
+      signInWithEmail,
+      signUpWithEmail,
+      signInWithGoogle,
+      signOut,
+      checkSession,
+    ],
+  );
 }
-
