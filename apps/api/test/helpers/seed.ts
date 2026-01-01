@@ -25,6 +25,21 @@ export const seedUser = async (
   `;
 };
 
+export const seedFriendship = async (
+  db: PostgresClient,
+  params: { userId: UserId; friendId: UserId },
+): Promise<void> => {
+  // 双方向の友達関係を作成（相互フォロー）
+  await db`
+    INSERT INTO friendships (user_id, friend_id)
+    VALUES (${params.userId}, ${params.friendId})
+  `;
+  await db`
+    INSERT INTO friendships (user_id, friend_id)
+    VALUES (${params.friendId}, ${params.userId})
+  `;
+};
+
 export const seedConversation = async (
   db: PostgresClient,
   params: { id: ConversationId },

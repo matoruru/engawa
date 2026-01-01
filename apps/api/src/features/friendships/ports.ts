@@ -1,5 +1,5 @@
 import type { UserId } from "@/shared/ids";
-import type { Friendship } from "./domain";
+import type { FriendInfo } from "./domain";
 
 export interface FriendshipsRepository {
   // 友達関係を追加
@@ -12,6 +12,6 @@ export interface FriendshipsRepository {
   isFriend(userId: UserId, friendId: UserId): Promise<boolean>;
   
   // ユーザーの友達一覧を取得
-  listFriends(userId: UserId): Promise<readonly UserId[]>;
+  listFriends(userId: UserId): Promise<readonly FriendInfo[]>;
 }
 

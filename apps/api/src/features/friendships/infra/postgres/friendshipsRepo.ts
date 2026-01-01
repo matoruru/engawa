@@ -1,12 +1,14 @@
 import * as z from "zod";
+import { type UserId, UserIdSchema } from "@/shared/ids";
 import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
-import type { UserId } from "@/shared/ids";
+import type { FriendInfo } from "../../domain";
 import type { FriendshipsRepository } from "../../ports";
 
-const FriendshipRowSchema = z.object({
-  user_id: z.string(),
-  friend_id: z.string(),
-  created_at: z.date(),
+const FriendInfoRowSchema = z.object({
+  friend_id: UserIdSchema,
+  username: z.string(),
+  display_name: z.string(),
+  avatar_url: z.string().nullable(),
 });
 
 export const makePostgresFriendshipsRepo = (
@@ -18,7 +20,7 @@ export const makePostgresFriendshipsRepo = (
       VALUES (${userId}, ${friendId})
       ON CONFLICT (user_id, friend_id) DO NOTHING
     `;
-    
+
     // 双方向の友達関係を作成（相互フォロー）
     await db`
       INSERT INTO friendships (user_id, friend_id)
@@ -32,7 +34,7 @@ export const makePostgresFriendshipsRepo = (
       DELETE FROM friendships
       WHERE user_id = ${userId} AND friend_id = ${friendId}
     `;
-    
+
     // 双方向の友達関係を削除
     await db`
       DELETE FROM friendships
@@ -50,16 +52,21 @@ export const makePostgresFriendshipsRepo = (
     return rows.length > 0;
   },
 
-  listFriends: async (userId: UserId): Promise<readonly UserId[]> => {
+  listFriends: async (userId: UserId): Promise<readonly FriendInfo[]> => {
     const rows = await db`
-      SELECT friend_id
-      FROM friendships
-      WHERE user_id = ${userId}
-      ORDER BY created_at DESC
+      SELECT f.friend_id, u.username, u.display_name, u.avatar_url
+      FROM friendships f
+      JOIN users u ON u.id = f.friend_id
+      WHERE f.user_id = ${userId}
+      ORDER BY f.created_at DESC;
     `;
-    
-    const parsed = z.array(z.object({ friend_id: z.string() })).parse(rows);
-    return parsed.map((row) => String(row.friend_id) as UserId);
+
+    const parsed = z.array(FriendInfoRowSchema).parse(rows);
+    return parsed.map((row) => ({
+      id: row.friend_id,
+      username: row.username,
+      displayName: row.display_name,
+      avatarUrl: row.avatar_url,
+    }));
   },
 });
-

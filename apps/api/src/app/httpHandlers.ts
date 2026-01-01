@@ -1,24 +1,27 @@
 import * as z from "zod";
 import type { ConversationId, UserId } from "@/shared/ids";
-import { ConversationIdSchema, MessageIdSchema, UserIdSchema } from "@/shared/ids";
-import { MessageTextSchema } from "../features/messages/domain";
-
-import { SendMessageInputSchema } from "../features/messages/usecases/sendMessage";
-import { SyncMessagesInputSchema } from "../features/messages/usecases/syncMessages";
-import { UpdateReadCursorInputSchema } from "../features/reads/usecases/updateReadCursor";
-import { CreateConversationInputSchema } from "../features/conversations/usecases/createConversation";
-import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
-import { GetConversationInputSchema } from "../features/conversations/usecases/getConversation";
+import {
+  ConversationIdSchema,
+  MessageIdSchema,
+  UserIdSchema,
+} from "@/shared/ids";
 import { AddMemberToConversationInputSchema } from "../features/conversations/usecases/addMemberToConversation";
-import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
+import { CreateConversationInputSchema } from "../features/conversations/usecases/createConversation";
+import { GetConversationInputSchema } from "../features/conversations/usecases/getConversation";
 import { LeaveConversationInputSchema } from "../features/conversations/usecases/leaveConversation";
+import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
+import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
 import { UpdateConversationTitleInputSchema } from "../features/conversations/usecases/updateConversationTitle";
 import { ListFriendsInputSchema } from "../features/friendships/usecases/listFriends";
 import { RemoveFriendInputSchema } from "../features/friendships/usecases/removeFriend";
+import { InviteTokenSchema } from "../features/invites/domain";
+import { AcceptInviteInputSchema } from "../features/invites/usecases/acceptInvite";
 import { CreateInviteInputSchema } from "../features/invites/usecases/createInvite";
 import { GetInviteInputSchema } from "../features/invites/usecases/getInvite";
-import { AcceptInviteInputSchema } from "../features/invites/usecases/acceptInvite";
-import { InviteTokenSchema } from "../features/invites/domain";
+import { MessageTextSchema } from "../features/messages/domain";
+import { SendMessageInputSchema } from "../features/messages/usecases/sendMessage";
+import { SyncMessagesInputSchema } from "../features/messages/usecases/syncMessages";
+import { UpdateReadCursorInputSchema } from "../features/reads/usecases/updateReadCursor";
 import type { AppServices } from "./compose";
 
 // HTTPは senderId/userId を受け取らない。認証から userId を取得して使う。
@@ -112,7 +115,7 @@ export const makeHttpHandlers = (svc: AppServices) => ({
       username: b.username,
       avatarUrl: b.avatarUrl,
     });
-    
+
     if (result.kind === "updated") {
       return { success: true };
     } else if (result.kind === "conflict") {
@@ -166,7 +169,7 @@ export const makeHttpHandlers = (svc: AppServices) => ({
       targetUserId,
     });
     const result = await svc.addMemberToConversation(input);
-    
+
     if (result.kind === "added") {
       return { success: true };
     } else if (result.kind === "forbidden") {
@@ -186,7 +189,7 @@ export const makeHttpHandlers = (svc: AppServices) => ({
       conversationId,
     });
     const result = await svc.listConversationMembers(input);
-    
+
     if (result.kind === "ok") {
       return { success: true, members: result.members };
     } else if (result.kind === "forbidden") {
@@ -195,16 +198,13 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     throw new Error("Unexpected result from listConversationMembers");
   },
 
-  leaveConversation: async (
-    userId: UserId,
-    conversationId: ConversationId,
-  ) => {
+  leaveConversation: async (userId: UserId, conversationId: ConversationId) => {
     const input = LeaveConversationInputSchema.parse({
       userId,
       conversationId,
     });
     const result = await svc.leaveConversation(input);
-    
+
     if (result.kind === "left") {
       return { success: true };
     } else if (result.kind === "forbidden") {
@@ -224,7 +224,7 @@ export const makeHttpHandlers = (svc: AppServices) => ({
       title,
     });
     const result = await svc.updateConversationTitle(input);
-    
+
     if (result.kind === "updated") {
       return { success: true };
     } else if (result.kind === "forbidden") {
@@ -252,7 +252,9 @@ export const makeHttpHandlers = (svc: AppServices) => ({
   },
 
   getInvite: async (token: string) => {
-    const input = GetInviteInputSchema.parse({ token: InviteTokenSchema.parse(token) });
+    const input = GetInviteInputSchema.parse({
+      token: InviteTokenSchema.parse(token),
+    });
     const result = await svc.getInvite(input);
     if (result.kind === "ok") {
       return { invite: result.invite };
@@ -288,7 +290,10 @@ export const makeHttpHandlers = (svc: AppServices) => ({
 
   removeFriend: async (userId: UserId, body: unknown) => {
     const b = z.object({ friendId: UserIdSchema }).parse(body);
-    const input = RemoveFriendInputSchema.parse({ userId, friendId: b.friendId });
+    const input = RemoveFriendInputSchema.parse({
+      userId,
+      friendId: b.friendId,
+    });
     const result = await svc.removeFriend(input);
     if (result.kind === "removed") {
       return { success: true };
