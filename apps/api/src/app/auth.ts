@@ -10,11 +10,13 @@ const pool = new Pool({
   user: env.POSTGRES_USER,
   password: env.POSTGRES_PASSWORD,
   database: env.POSTGRES_DATABASE,
-  ssl: {
-    servername: env.POSTGRES_HOST,
-    rejectUnauthorized: true,
-    ca: env.SUPABASE_POSTGRES_CERT,
-  },
+  ...(env.SUPABASE_POSTGRES_CERT ? {
+    tls: {
+      rejectUnauthorized: true,
+      requestCert: true,
+      ca: env.SUPABASE_POSTGRES_CERT,
+    },
+  } : {}),
 });
 
 const makeInitialUsername = (authUserId: string, email: string): string => {
