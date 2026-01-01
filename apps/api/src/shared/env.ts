@@ -2,7 +2,7 @@ import * as z from "zod";
 
 const EnvSchema = z.object({
   POSTGRES_HOST: z.string().min(1),
-  POSTGRES_PORT: z.number().int().min(1).max(65535),
+  POSTGRES_PORT: z.coerce.number().min(1).max(65535),
   POSTGRES_USER: z.string().min(1),
   POSTGRES_PASSWORD: z.string().min(1),
   POSTGRES_DATABASE: z.string().min(1),
