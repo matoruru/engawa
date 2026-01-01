@@ -75,7 +75,7 @@ server {
     add_header Cache-Control "public, max-age=3600" always;
   }
   location = /apple-touch-icon.png {
-    try_files /icons/apple-touch-icon.png =404;
+    try_files $uri =404;
     add_header Cache-Control "public, max-age=3600" always;
   }
 
