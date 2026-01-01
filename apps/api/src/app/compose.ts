@@ -1,49 +1,83 @@
-import z from "zod";
 import { randomBytes } from "crypto";
+import z from "zod";
 import { env } from "@/shared/env";
-import { ConversationIdSchema, MessageIdSchema, type UserId, UserIdSchema } from "@/shared/ids";
+import {
+  ConversationIdSchema,
+  MessageIdSchema,
+  type UserId,
+  UserIdSchema,
+} from "@/shared/ids";
 import {
   createPostgresClient,
   type PostgresClient,
 } from "@/shared/infra/postgres/postgresClient";
+import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
 import { uuidv7 } from "@/shared/uuid";
 import { makePostgresConversationMembersRepo } from "../features/conversations/infra/postgres/conversationMembersRepo";
 import { makePostgresConversationRepo } from "../features/conversations/infra/postgres/conversationRepo";
 import {
-  makeCreateConversation,
-  type CreateConversationInput,
-  type CreateConversationResult,
-} from "../features/conversations/usecases/createConversation";
-import {
-  makeListConversations,
-  type ListConversationsInput,
-  type ListConversationsResult,
-} from "../features/conversations/usecases/listConversations";
-import {
-  makeGetConversation,
-  type GetConversationInput,
-  type GetConversationResult,
-} from "../features/conversations/usecases/getConversation";
-import {
-  makeAddMemberToConversation,
   type AddMemberToConversationInput,
   type AddMemberToConversationResult,
+  makeAddMemberToConversation,
 } from "../features/conversations/usecases/addMemberToConversation";
 import {
-  makeListConversationMembers,
-  type ListConversationMembersInput,
-  type ListConversationMembersResult,
-} from "../features/conversations/usecases/listConversationMembers";
+  type CreateConversationInput,
+  type CreateConversationResult,
+  makeCreateConversation,
+} from "../features/conversations/usecases/createConversation";
 import {
-  makeLeaveConversation,
+  type GetConversationInput,
+  type GetConversationResult,
+  makeGetConversation,
+} from "../features/conversations/usecases/getConversation";
+import {
   type LeaveConversationInput,
   type LeaveConversationResult,
+  makeLeaveConversation,
 } from "../features/conversations/usecases/leaveConversation";
+import {
+  type ListConversationMembersInput,
+  type ListConversationMembersResult,
+  makeListConversationMembers,
+} from "../features/conversations/usecases/listConversationMembers";
+import {
+  type ListConversationsInput,
+  type ListConversationsResult,
+  makeListConversations,
+} from "../features/conversations/usecases/listConversations";
 import {
   makeUpdateConversationTitle,
   type UpdateConversationTitleInput,
   type UpdateConversationTitleResult,
 } from "../features/conversations/usecases/updateConversationTitle";
+import { makePostgresFriendshipsRepo } from "../features/friendships/infra/postgres/friendshipsRepo";
+import {
+  type ListFriendsInput,
+  type ListFriendsResult,
+  makeListFriends,
+} from "../features/friendships/usecases/listFriends";
+import {
+  makeRemoveFriend,
+  type RemoveFriendInput,
+  type RemoveFriendResult,
+} from "../features/friendships/usecases/removeFriend";
+import { InviteTokenSchema } from "../features/invites/domain";
+import { makePostgresInvitesRepo } from "../features/invites/infra/postgres/invitesRepo";
+import {
+  type AcceptInviteInput,
+  type AcceptInviteResult,
+  makeAcceptInvite,
+} from "../features/invites/usecases/acceptInvite";
+import {
+  type CreateInviteInput,
+  type CreateInviteResult,
+  makeCreateInvite,
+} from "../features/invites/usecases/createInvite";
+import {
+  type GetInviteInput,
+  type GetInviteResult,
+  makeGetInvite,
+} from "../features/invites/usecases/getInvite";
 import { makePostgresMessageQueryRepo } from "../features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresMessageRepo } from "../features/messages/infra/postgres/messageRepo";
 import {
@@ -62,40 +96,11 @@ import {
   type UpdateReadCursorInput,
   type UpdateReadCursorResult,
 } from "../features/reads/usecases/updateReadCursor";
-import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
 import {
   makeUpdateUserProfile,
   type UpdateUserProfileInput,
   type UpdateUserProfileResult,
 } from "../features/users/usecases/updateUserProfile";
-import { makePostgresFriendshipsRepo } from "../features/friendships/infra/postgres/friendshipsRepo";
-import {
-  makeListFriends,
-  type ListFriendsInput,
-  type ListFriendsResult,
-} from "../features/friendships/usecases/listFriends";
-import {
-  makeRemoveFriend,
-  type RemoveFriendInput,
-  type RemoveFriendResult,
-} from "../features/friendships/usecases/removeFriend";
-import { makePostgresInvitesRepo } from "../features/invites/infra/postgres/invitesRepo";
-import {
-  makeCreateInvite,
-  type CreateInviteInput,
-  type CreateInviteResult,
-} from "../features/invites/usecases/createInvite";
-import {
-  makeGetInvite,
-  type GetInviteInput,
-  type GetInviteResult,
-} from "../features/invites/usecases/getInvite";
-import {
-  makeAcceptInvite,
-  type AcceptInviteInput,
-  type AcceptInviteResult,
-} from "../features/invites/usecases/acceptInvite";
-import { InviteTokenSchema } from "../features/invites/domain";
 
 const UserIdRowSchema = z.object({ user_id: z.string() });
 
@@ -136,12 +141,20 @@ export type AppServices = {
   createInvite: (input: CreateInviteInput) => Promise<CreateInviteResult>;
   getInvite: (input: GetInviteInput) => Promise<GetInviteResult>;
   acceptInvite: (input: AcceptInviteInput) => Promise<AcceptInviteResult>;
-  updateUserProfile: (input: UpdateUserProfileInput) => Promise<UpdateUserProfileResult>;
+  updateUserProfile: (
+    input: UpdateUserProfileInput,
+  ) => Promise<UpdateUserProfileResult>;
   userRepo: ReturnType<typeof makePostgresUserRepo>;
 };
 
 export const composeApp = (): AppServices => {
-  const db = createPostgresClient(env.POSTGRES_URL);
+  const db = createPostgresClient({
+    POSTGRES_HOST: env.POSTGRES_HOST,
+    POSTGRES_PORT: env.POSTGRES_PORT,
+    POSTGRES_USER: env.POSTGRES_USER,
+    POSTGRES_PASSWORD: env.POSTGRES_PASSWORD,
+    POSTGRES_DATABASE: env.POSTGRES_DATABASE,
+  });
 
   const resolveAppUserIdFromAuthUserId = async (
     authUserId: string,
@@ -205,13 +218,13 @@ export const composeApp = (): AppServices => {
     now: () => new Date(),
   });
 
-    const listConversations = makeListConversations({
-      membersRepo,
-      messageQueryRepo,
-      conversationRepo,
-      readsRepo,
-      userRepo,
-    });
+  const listConversations = makeListConversations({
+    membersRepo,
+    messageQueryRepo,
+    conversationRepo,
+    readsRepo,
+    userRepo,
+  });
 
   const getConversation = makeGetConversation({
     conversationRepo,

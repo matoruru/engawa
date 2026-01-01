@@ -26,18 +26,14 @@ import {
 } from "../../helpers/seed";
 import { uuidv7 } from "../../../src/shared/uuid";
 
-const must = (v: string | undefined, name: string): string => {
-  if (!v) throw new Error(`Missing env: ${name}`);
-  return v;
-};
-
 describe("e2e/usecases: conversations flow", () => {
-  const url =
-    process.env.POSTGRES_TEST_URL ??
-    process.env.POSTGRES_URL ??
-    must(process.env.POSTGRES_URL, "POSTGRES_URL");
-
-  const db = createPostgresClient(url);
+  const db = createPostgresClient({
+    POSTGRES_HOST: process.env.POSTGRES_HOST ?? "",
+    POSTGRES_PORT: Number(process.env.POSTGRES_PORT ?? 5432),
+    POSTGRES_USER: process.env.POSTGRES_USER ?? "",
+    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? "",
+    POSTGRES_DATABASE: process.env.POSTGRES_DATABASE ?? "",
+  });
 
   const uid1 = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e11");
   const uid2 = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e12");

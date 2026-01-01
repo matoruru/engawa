@@ -29,18 +29,14 @@ import {
   seedUser,
 } from "../../helpers/seed";
 
-const must = (v: string | undefined, name: string): string => {
-  if (!v) throw new Error(`Missing env: ${name}`);
-  return v;
-};
-
 describe("e2e/usecases: chat flow", () => {
-  const url =
-    process.env.POSTGRES_TEST_URL ??
-    process.env.POSTGRES_URL ??
-    must(process.env.POSTGRES_URL, "POSTGRES_URL");
-
-  const db = createPostgresClient(url);
+  const db = createPostgresClient({
+    POSTGRES_HOST: process.env.POSTGRES_HOST ?? "",
+    POSTGRES_PORT: Number(process.env.POSTGRES_PORT ?? 5432),
+    POSTGRES_USER: process.env.POSTGRES_USER ?? "",
+    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? "",
+    POSTGRES_DATABASE: process.env.POSTGRES_DATABASE ?? "",
+  });
 
   const cid = ConversationIdSchema.parse(
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e10",

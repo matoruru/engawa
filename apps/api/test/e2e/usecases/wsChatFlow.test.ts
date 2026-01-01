@@ -6,10 +6,12 @@ import {
   expect,
   it,
 } from "bun:test";
+import crypto from "crypto";
 import { Elysia } from "elysia";
+import { makeGetConversation } from "src/features/conversations/usecases/getConversation";
+import { makeUpdateUserProfile } from "src/features/users/usecases/updateUserProfile";
 import WebSocket from "ws";
 import type * as z from "zod";
-
 import {
   ClientMessageIdSchema,
   ConversationIdSchema,
@@ -18,7 +20,6 @@ import {
   UserIdSchema,
 } from "@/shared/ids";
 import { createPostgresClient } from "@/shared/infra/postgres/postgresClient";
-
 import { sessionRoutes } from "../../../src/app/sessionRoutes";
 import { makeWsApp } from "../../../src/app/ws";
 import {
@@ -27,15 +28,22 @@ import {
   WsServerEventSchema,
   WsSyncMessagesResultSchema,
 } from "../../../src/app/wsTypes";
-
 import { makePostgresConversationMembersRepo } from "../../../src/features/conversations/infra/postgres/conversationMembersRepo";
 import { makePostgresConversationRepo } from "../../../src/features/conversations/infra/postgres/conversationRepo";
-import { makeCreateConversation } from "../../../src/features/conversations/usecases/createConversation";
-import { makeListConversations } from "../../../src/features/conversations/usecases/listConversations";
 import { makeAddMemberToConversation } from "../../../src/features/conversations/usecases/addMemberToConversation";
-import { makeListConversationMembers } from "../../../src/features/conversations/usecases/listConversationMembers";
+import { makeCreateConversation } from "../../../src/features/conversations/usecases/createConversation";
 import { makeLeaveConversation } from "../../../src/features/conversations/usecases/leaveConversation";
+import { makeListConversationMembers } from "../../../src/features/conversations/usecases/listConversationMembers";
+import { makeListConversations } from "../../../src/features/conversations/usecases/listConversations";
 import { makeUpdateConversationTitle } from "../../../src/features/conversations/usecases/updateConversationTitle";
+import { makePostgresFriendshipsRepo } from "../../../src/features/friendships/infra/postgres/friendshipsRepo";
+import { makeListFriends } from "../../../src/features/friendships/usecases/listFriends";
+import { makeRemoveFriend } from "../../../src/features/friendships/usecases/removeFriend";
+import { InviteTokenSchema } from "../../../src/features/invites/domain";
+import { makePostgresInvitesRepo } from "../../../src/features/invites/infra/postgres/invitesRepo";
+import { makeAcceptInvite } from "../../../src/features/invites/usecases/acceptInvite";
+import { makeCreateInvite } from "../../../src/features/invites/usecases/createInvite";
+import { makeGetInvite } from "../../../src/features/invites/usecases/getInvite";
 import { MessageTextSchema } from "../../../src/features/messages/domain";
 import { makePostgresMessageQueryRepo } from "../../../src/features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresMessageRepo } from "../../../src/features/messages/infra/postgres/messageRepo";
@@ -45,29 +53,12 @@ import { makePostgresConversationReadsRepo } from "../../../src/features/reads/i
 import { makeUpdateReadCursor } from "../../../src/features/reads/usecases/updateReadCursor";
 import { makePostgresUserRepo } from "../../../src/shared/infra/postgres/userRepo";
 import { uuidv7 } from "../../../src/shared/uuid";
-import { makePostgresFriendshipsRepo } from "../../../src/features/friendships/infra/postgres/friendshipsRepo";
-import { makePostgresInvitesRepo } from "../../../src/features/invites/infra/postgres/invitesRepo";
-import { makeListFriends } from "../../../src/features/friendships/usecases/listFriends";
-import { makeRemoveFriend } from "../../../src/features/friendships/usecases/removeFriend";
-import { makeCreateInvite } from "../../../src/features/invites/usecases/createInvite";
-import { makeGetInvite } from "../../../src/features/invites/usecases/getInvite";
-import { makeAcceptInvite } from "../../../src/features/invites/usecases/acceptInvite";
-import { InviteTokenSchema } from "../../../src/features/invites/domain";
-import crypto from "crypto";
-
 import {
   resetDb,
   seedConversation,
   seedMember,
   seedUser,
 } from "../../helpers/seed";
-import { makeUpdateUserProfile } from "src/features/users/usecases/updateUserProfile";
-import { makeGetConversation } from "src/features/conversations/usecases/getConversation";
-
-const must = (v: string | undefined, name: string): string => {
-  if (!v) throw new Error(`Missing env: ${name}`);
-  return v;
-};
 
 const extractSessionCookie = (setCookie: string): string => {
   const m = /(?:^|,\s*)session=([^;]+)/.exec(setCookie);
@@ -169,12 +160,13 @@ const getListeningPort = (app: Elysia): number => {
 };
 
 describe("e2e/usecases: ws chat flow (cookie auth)", () => {
-  const url =
-    process.env.POSTGRES_TEST_URL ??
-    process.env.POSTGRES_URL ??
-    must(process.env.POSTGRES_URL, "POSTGRES_URL");
-
-  const db = createPostgresClient(url);
+  const db = createPostgresClient({
+    POSTGRES_HOST: process.env.POSTGRES_HOST ?? "",
+    POSTGRES_PORT: Number(process.env.POSTGRES_PORT ?? 5432),
+    POSTGRES_USER: process.env.POSTGRES_USER ?? "",
+    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? "",
+    POSTGRES_DATABASE: process.env.POSTGRES_DATABASE ?? "",
+  });
 
   const cid = ConversationIdSchema.parse(
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e10",
