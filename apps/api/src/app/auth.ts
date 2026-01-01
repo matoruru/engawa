@@ -11,7 +11,7 @@ const pool = new Pool({
   password: env.POSTGRES_PASSWORD,
   database: env.POSTGRES_DATABASE,
   ...(env.SUPABASE_POSTGRES_CERT ? {
-    tls: {
+    ssl: {
       rejectUnauthorized: true,
       requestCert: true,
       ca: env.SUPABASE_POSTGRES_CERT,
