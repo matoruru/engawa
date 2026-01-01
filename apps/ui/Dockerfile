@@ -44,28 +44,51 @@ server {
   listen 8080;
   server_name _;
   root /usr/share/nginx/html;
-  index index.html;
 
-  # 静的ファイルはそのまま
+  # index/manifest/sw は更新させたい
+  location = /index.html {
+    try_files $uri =404;
+    add_header Cache-Control "no-store" always;
+  }
+  location = /manifest.webmanifest {
+    try_files $uri =404;
+    add_header Cache-Control "no-store" always;
+    types { application/manifest+json webmanifest; }
+  }
+  location = /sw.js {
+    try_files $uri =404;
+    add_header Cache-Control "no-store" always;
+    add_header Service-Worker-Allowed "/" always;
+  }
+  location ~* ^/workbox-.*\.js$ {
+    try_files $uri =404;
+    add_header Cache-Control "no-store" always;
+  }
+
+  # iOSが探しに来る“ルート直下”も用意する（無いなら icons へ寄せる）
+  location = /apple-touch-icon.png {
+    try_files /icons/apple-touch-icon.png =404;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+  }
+  location = /favicon.ico {
+    try_files $uri =404;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+  }
+
+  # ハッシュ付き資産は長期キャッシュ
   location /assets/ {
     try_files $uri =404;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
   }
   location /icons/ {
     try_files $uri =404;
-  }
-  location /manifest.webmanifest {
-    try_files $uri =404;
-  }
-  location /apple-touch-icon.png {
-    try_files $uri =404;
-  }
-  location /favicon.ico {
-    try_files $uri =404;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
   }
 
-  # SPA ルーティング（/profile 等）対策
+  # SPA fallback
   location / {
     try_files $uri $uri/ /index.html;
+    add_header Cache-Control "no-store" always;
   }
 }
 NGINX
