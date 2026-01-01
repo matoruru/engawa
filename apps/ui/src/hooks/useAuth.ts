@@ -2,6 +2,7 @@ import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBetterAuthClient } from "../lib/authClient";
+import { useApi } from "./useApi";
 
 interface User {
   id: string;
@@ -15,15 +16,7 @@ export function useAuth(apiUrl: string) {
   const [appUserId, setAppUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const app = useMemo(
-    () =>
-      treaty<AppContract>(apiUrl, {
-        fetch: {
-          credentials: "include",
-        },
-      }),
-    [apiUrl],
-  );
+  const api = useApi(apiUrl);
 
   const authClient = useMemo(
     () => createBetterAuthClient(`${apiUrl}/api/auth`),
@@ -32,7 +25,7 @@ export function useAuth(apiUrl: string) {
 
   const fetchAppUserId = useCallback(async () => {
     try {
-      const meResponse = await app.me.get();
+      const meResponse = await api.me.get();
       if (meResponse.data && "user" in meResponse.data) {
         setAppUserId(meResponse.data.user.id);
       } else {
@@ -42,7 +35,7 @@ export function useAuth(apiUrl: string) {
       console.error("Failed to get app user ID:", error);
       setAppUserId(null);
     }
-  }, [app]);
+  }, [api]);
 
   const checkSession = useCallback(async () => {
     try {

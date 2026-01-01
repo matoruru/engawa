@@ -25,6 +25,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useBadge } from "./hooks/useBadge";
 import { useNotifications } from "./hooks/useNotifications";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { useApi } from "./hooks/useApi";
 
 type ConversationPreview = {
   conversationId: string;
@@ -143,15 +144,7 @@ function AppContent() {
     return unsubscribe;
   }, [user, ws.isConnected, ws, appUserId, showNotification, setConversations]);
 
-  const app = useMemo(
-    () =>
-      treaty<AppContract>(apiUrl, {
-        fetch: {
-          credentials: "include",
-        },
-      }),
-    [apiUrl],
-  );
+  const app = useApi(apiUrl);
 
   // Googleログイン後のリダイレクト処理
   useEffect(() => {

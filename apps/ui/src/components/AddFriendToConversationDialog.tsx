@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { X, UserPlus } from "lucide-react";
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
+import { useApi } from "@/hooks/useApi";
 
 interface Friend {
   id: string;
@@ -31,15 +32,7 @@ export function AddFriendToConversationDialog({
   const [isLoading, setIsLoading] = useState(true);
   const [isInviting, setIsInviting] = useState<string | null>(null);
 
-  const app = useMemo(
-    () =>
-      treaty<AppContract>(apiUrl, {
-        fetch: {
-          credentials: "include",
-        },
-      }),
-    [apiUrl]
-  );
+  const app = useApi(apiUrl);
 
   // 友達一覧を取得
   useEffect(() => {
@@ -83,7 +76,7 @@ export function AddFriendToConversationDialog({
     };
 
     loadFriends();
-  }, [conversationId, app]);
+  }, [conversationId, app, apiUrl]);
 
   // 既にメンバーの友達を除外
   const availableFriends = friends.filter(

@@ -1,12 +1,11 @@
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@idobata/contracts";
 import { Check, Copy, Link2, UserMinus, Users } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "../hooks/useLocation";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
+import { useApi } from "@/hooks/useApi";
 
 interface Friend {
   id: string;
@@ -29,13 +28,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
   const [copied, setCopied] = useState(false);
   const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
 
-  const app = useMemo(
-    () =>
-      treaty<AppContract>(apiUrl, {
-        fetch: { credentials: "include" },
-      }),
-    [apiUrl],
-  );
+  const app = useApi(apiUrl);
 
   useEffect(() => {
     const loadFriends = async () => {

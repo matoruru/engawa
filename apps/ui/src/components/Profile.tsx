@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Input } from "./ui/input";
+import { useApi } from "@/hooks/useApi";
 
 interface User {
   id: string;
@@ -45,13 +46,7 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
     avatarUrl: string | null;
   } | null>(null);
 
-  const app = useMemo(
-    () =>
-      treaty<AppContract>(apiUrl, {
-        fetch: { credentials: "include" },
-      }),
-    [apiUrl],
-  );
+  const app = useApi(apiUrl);
 
   // 現在のユーザー情報を取得
   useEffect(() => {

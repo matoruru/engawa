@@ -1,8 +1,7 @@
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@idobata/contracts";
 import { ArrowLeft, LogOut, Pencil, Send, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v7 as uuidv7 } from "uuid";
+import { useApi } from "@/hooks/useApi";
 import { cn } from "@/lib/utils";
 import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
 import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
@@ -75,15 +74,7 @@ export function Chat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<Map<string, number>>(new Map());
 
-  const app = useMemo(
-    () =>
-      treaty<AppContract>(apiUrl, {
-        fetch: {
-          credentials: "include",
-        },
-      }),
-    [apiUrl],
-  );
+  const app = useApi(apiUrl);
   const ws = useWebSocket(wsUrl);
 
   // メッセージをスクロール位置の最下部に表示
@@ -198,7 +189,7 @@ export function Chat({
     if (ws.isConnected) {
       loadMessages();
     }
-  }, [conversationId, ws.isConnected, app]);
+  }, [conversationId, ws.isConnected, app, updateUnreadCount, ws.send]);
 
   // WebSocketイベントの処理
   useEffect(() => {
@@ -248,7 +239,7 @@ export function Chat({
       unsubscribeMessageCreated();
       unsubscribeMessagesSynced();
     };
-  }, [ws]);
+  }, [conversationId, updateUnreadCount, ws.send, ws.on]);
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
@@ -400,7 +391,7 @@ export function Chat({
       if (startTimerRef.current) window.clearTimeout(startTimerRef.current);
       if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current);
     };
-  }, [input, conversationId, ws.isConnected, ws.send]);
+  }, [input, conversationId, ws.isConnected, ws]);
 
   // タイピングイベントの受信
   useEffect(() => {

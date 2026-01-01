@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
+import { useApi } from "@/hooks/useApi";
 
 interface User {
   id: string;
@@ -35,15 +36,7 @@ export function InviteUserDialog({
   const [members, setMembers] = useState<User[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(true);
 
-  const app = useMemo(
-    () =>
-      treaty<AppContract>(apiUrl, {
-        fetch: {
-          credentials: "include",
-        },
-      }),
-    [apiUrl],
-  );
+  const app = useApi(apiUrl);
 
   // ユーザー検索関数（型安全な実装）
   const searchUsersApi = async (query: string): Promise<{ users: User[] }> => {
@@ -114,7 +107,7 @@ export function InviteUserDialog({
 
     const timeoutId = setTimeout(searchUsers, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, members, apiUrl]);
+  }, [searchQuery, members, app]);
 
   const handleInvite = async (userId: string) => {
     try {
