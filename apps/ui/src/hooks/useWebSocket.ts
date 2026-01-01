@@ -47,7 +47,7 @@ export function useWebSocket(url: string) {
       setSocketId(null);
       reconnectTimeoutRef.current = window.setTimeout(() => connect(), 5000);
     };
-  }, [url, disconnect]); // disconnectは直接使ってないけど、依存関係を揃えるなら入れてもOK
+  }, [url]);
 
   const send = useCallback((evt: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

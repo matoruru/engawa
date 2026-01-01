@@ -1,11 +1,12 @@
 import { treaty } from "@elysiajs/eden";
 import type { App as AppContract } from "@idobata/contracts";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   BrowserRouter,
   Navigate,
   Route,
   Routes,
+  useLocation,
   useNavigate,
   useParams,
 } from "react-router";
@@ -21,6 +22,9 @@ import {
   useConversations,
 } from "./contexts/ConversationsContext";
 import { useAuth } from "./hooks/useAuth";
+import { useBadge } from "./hooks/useBadge";
+import { useNotifications } from "./hooks/useNotifications";
+import { useWebSocket } from "./hooks/useWebSocket";
 
 type ConversationPreview = {
   conversationId: string;
@@ -38,8 +42,101 @@ function AppContent() {
   const apiUrl = constants.API_URL;
   const { user, appUserId, isLoading, refreshSession, signOut } =
     useAuth(apiUrl);
-  const { setConversations, updateUnreadCount } = useConversations();
+  const { conversations, setConversations, updateUnreadCount, totalUnreadCount } = useConversations();
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentConversationIdRef = useRef<string | null>(null);
+  const conversationsRef = useRef(conversations);
+  const { showNotification, requestPermission } = useNotifications();
+  const ws = useWebSocket(constants.WS_URL);
+
+  // conversationsの最新値をrefに保持
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
+  // バッジを更新
+  useBadge(totalUnreadCount);
+
+  // 現在表示中の会話IDを追跡
+  useEffect(() => {
+    const match = location.pathname.match(/^\/conversations\/([^/]+)$/);
+    currentConversationIdRef.current = match ? match[1] : null;
+  }, [location.pathname]);
+
+  // 通知許可をリクエスト（初回ログイン時）
+  useEffect(() => {
+    if (user) {
+      requestPermission();
+    }
+  }, [user, requestPermission]);
+
+  // WebSocketでメッセージを受信した時に通知を送信し、未読数を更新
+  useEffect(() => {
+    if (!user || !ws.isConnected) return;
+
+    const unsubscribe = ws.on("message.created", (event) => {
+      const { conversationId, senderId, messageText } = event.payload;
+      const currentConversationId = currentConversationIdRef.current;
+
+      // 現在表示中の会話でない場合、未読数を増やす
+      if (conversationId !== currentConversationId) {
+        setConversations((prev) => {
+          const conversation = prev.find((c) => c.conversationId === conversationId);
+          if (conversation) {
+            // 未読数を増やす
+            const newUnreadCount = conversation.unreadCount + 1;
+            // 最新メッセージを更新
+            const updatedMessages = [
+              ...conversation.latestMessages,
+              {
+                messageText,
+                senderId,
+                senderDisplayName: "誰か", // 後で更新される可能性がある
+                createdAt: new Date().toISOString(),
+              },
+            ].slice(-2); // 最新2件のみ保持
+
+            return prev.map((c) =>
+              c.conversationId === conversationId
+                ? {
+                    ...c,
+                    unreadCount: newUnreadCount,
+                    latestMessages: updatedMessages,
+                  }
+                : c,
+            );
+          }
+          return prev;
+        });
+      }
+
+      // 現在表示中の会話でない場合、または自分が送信したメッセージでない場合のみ通知
+      if (
+        conversationId !== currentConversationId &&
+        senderId !== appUserId
+      ) {
+        // 会話情報を取得（更新後の最新値）
+        setTimeout(() => {
+          const conversation = conversationsRef.current.find(
+            (c) => c.conversationId === conversationId,
+          );
+          const title = conversation?.title || `会話 ${conversationId.slice(0, 8)}`;
+          const senderName = conversation?.latestMessages.find(
+            (m) => m.senderId === senderId,
+          )?.senderDisplayName || "誰か";
+
+          showNotification(`${senderName}: ${messageText}`, {
+            body: title,
+            tag: conversationId,
+            requireInteraction: false,
+          });
+        }, 0);
+      }
+    });
+
+    return unsubscribe;
+  }, [user, ws.isConnected, ws, appUserId, showNotification, setConversations]);
 
   const app = useMemo(
     () =>

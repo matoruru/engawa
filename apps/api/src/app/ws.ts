@@ -153,6 +153,7 @@ export const makeWsApp = (svc: AppServices) => {
 
     async open(ws) {
       sockets.set(ws.id, ws);
+      console.log("ws opened", ws.id);
 
       const userId = await resolveUserIdForWs(svc, ws.data.headers);
       if (!userId) {

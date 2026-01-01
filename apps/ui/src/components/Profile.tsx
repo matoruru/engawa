@@ -408,6 +408,13 @@ export function Profile({ user, onSignOut, apiUrl }: ProfileProps) {
                   )}
                 </div>
 
+                {/* バージョン情報 */}
+                <div className="pt-4 border-t">
+                  <div className="text-xs text-muted-foreground text-center">
+                    バージョン {import.meta.env.VITE_APP_VERSION || "0.0.0"}
+                  </div>
+                </div>
+
                 {/* ログアウトボタン */}
                 <div className="pt-4 border-t">
                   <Button

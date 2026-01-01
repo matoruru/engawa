@@ -385,6 +385,7 @@ export function Chat({
       const timeoutId = window.setTimeout(handleTypingStart, 500);
       typingTimeoutRef.current.set(conversationId, timeoutId);
     } else {
+
       handleTypingStop();
     }
 
