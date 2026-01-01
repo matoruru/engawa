@@ -355,55 +355,52 @@ export function Chat({
       .slice(0, 2);
   };
 
+  const typingStateRef = useRef<"idle" | "started">("idle");
+  const startTimerRef = useRef<number | null>(null);
+  const stopTimerRef = useRef<number | null>(null);
+
   // タイピング開始/停止の処理
   useEffect(() => {
     if (!ws.isConnected) return;
 
-    const handleTypingStart = () => {
-      if (input.trim()) {
-        ws.send({
-          type: "typing.start",
-          payload: { conversationId },
-        });
+    const trimmed = input.trim();
+
+    // timer reset（入力が来るたびに「最後の入力時刻」を更新する）
+    if (startTimerRef.current) window.clearTimeout(startTimerRef.current);
+    if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current);
+    startTimerRef.current = null;
+    stopTimerRef.current = null;
+
+    // 入力が空：初期状態でもここに来るが、started じゃないなら何もしない
+    if (trimmed === "") {
+      if (typingStateRef.current === "started") {
+        ws.send({ type: "typing.stop", payload: { conversationId } });
+        typingStateRef.current = "idle";
       }
-    };
-
-    const handleTypingStop = () => {
-      ws.send({
-        type: "typing.stop",
-        payload: { conversationId },
-      });
-    };
-
-    // デバウンス: 500ms後にタイピング開始を送信
-    const existingTimeout = typingTimeoutRef.current.get(conversationId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
+      return;
     }
 
-    if (input.trim()) {
-      const timeoutId = window.setTimeout(handleTypingStart, 500);
-      typingTimeoutRef.current.set(conversationId, timeoutId);
-    } else {
-
-      handleTypingStop();
+    // 入力がある：まだ started を送ってないなら debounce して start
+    if (typingStateRef.current === "idle") {
+      startTimerRef.current = window.setTimeout(() => {
+        ws.send({ type: "typing.start", payload: { conversationId } });
+        typingStateRef.current = "started";
+      }, 500);
     }
 
-    // 3秒後に自動的にタイピング停止を送信
-    const stopTimeoutId = window.setTimeout(() => {
-      if (input.trim()) {
-        handleTypingStop();
+    // 無入力が続いたら stop（入力が続く限りこのタイマーは延長される）
+    stopTimerRef.current = window.setTimeout(() => {
+      if (typingStateRef.current === "started") {
+        ws.send({ type: "typing.stop", payload: { conversationId } });
+        typingStateRef.current = "idle";
       }
     }, 3000);
 
     return () => {
-      const timeoutId = typingTimeoutRef.current.get(conversationId);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      clearTimeout(stopTimeoutId);
+      if (startTimerRef.current) window.clearTimeout(startTimerRef.current);
+      if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current);
     };
-  }, [input, conversationId, ws.isConnected, ws]);
+  }, [input, conversationId, ws.isConnected, ws.send]);
 
   // タイピングイベントの受信
   useEffect(() => {

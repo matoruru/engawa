@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function useWebSocket(url: string) {
   const [isConnected, setIsConnected] = useState(false);
@@ -58,7 +58,8 @@ export function useWebSocket(url: string) {
   }, []);
 
   const on = useCallback((type: string, listener: (event: any) => void) => {
-    if (!listenersRef.current.has(type)) listenersRef.current.set(type, new Set());
+    if (!listenersRef.current.has(type))
+      listenersRef.current.set(type, new Set());
     listenersRef.current.get(type)!.add(listener);
     return () => listenersRef.current.get(type)?.delete(listener);
   }, []);
@@ -75,5 +76,8 @@ export function useWebSocket(url: string) {
     return unsub;
   }, [on]);
 
-  return { isConnected, socketId, send, on, connect, disconnect };
+  return useMemo(
+    () => ({ isConnected, socketId, send, on, connect, disconnect }),
+    [isConnected, socketId, send, on, connect, disconnect],
+  );
 }
