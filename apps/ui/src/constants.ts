@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { isDevRuntime } from "./lib/utils";
 
 const EnvSchema = z.object({
   API_URL: z.url(),
