@@ -45,7 +45,7 @@ server {
   server_name _;
   root /usr/share/nginx/html;
 
-  # index/manifest/sw は更新させたい
+  # index/manifest/sw/workbox-*.jsは常に最新にしたい
   location = /index.html {
     try_files $uri =404;
     add_header Cache-Control "no-store" always;
@@ -65,22 +65,22 @@ server {
     add_header Cache-Control "no-store" always;
   }
 
-  # iOSが探しに来る“ルート直下”も用意する（無いなら icons へ寄せる）
-  location = /apple-touch-icon.png {
-    try_files /icons/apple-touch-icon.png =404;
-    add_header Cache-Control "public, max-age=31536000, immutable" always;
+  # 画像は短期的にキャッシュ
+  location /icons/ {
+    try_files $uri =404;
+    add_header Cache-Control "public, max-age=3600" always;
   }
   location = /favicon.ico {
     try_files $uri =404;
-    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    add_header Cache-Control "public, max-age=3600" always;
+  }
+  location = /apple-touch-icon.png {
+    try_files /icons/apple-touch-icon.png =404;
+    add_header Cache-Control "public, max-age=3600" always;
   }
 
-  # ハッシュ付き資産は長期キャッシュ
+  # ハッシュ付きファイルは長期キャッシュ
   location /assets/ {
-    try_files $uri =404;
-    add_header Cache-Control "public, max-age=31536000, immutable" always;
-  }
-  location /icons/ {
     try_files $uri =404;
     add_header Cache-Control "public, max-age=31536000, immutable" always;
   }
