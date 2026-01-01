@@ -1,7 +1,12 @@
 import * as z from "zod";
 
 const EnvSchema = z.object({
-  POSTGRES_URL: z.string().min(1),
+  POSTGRES_HOST: z.string().min(1),
+  POSTGRES_PORT: z.number().int().min(1).max(65535),
+  POSTGRES_USER: z.string().min(1),
+  POSTGRES_PASSWORD: z.string().min(1),
+  POSTGRES_DATABASE: z.string().min(1),
+  SUPABASE_POSTGRES_CERT: z.string().optional(),
 
   // セッショントークン（JWT）検証用
   SESSION_JWT_SECRET: z.string().min(1),

@@ -4,7 +4,18 @@ import { env } from "@/shared/env";
 import { isDevRuntime } from "@/shared/runtime";
 import { uuidv7 } from "@/shared/uuid";
 
-const pool = new Pool({ connectionString: env.POSTGRES_URL });
+const pool = new Pool({
+  host: env.POSTGRES_HOST,
+  port: env.POSTGRES_PORT,
+  user: env.POSTGRES_USER,
+  password: env.POSTGRES_PASSWORD,
+  database: env.POSTGRES_DATABASE,
+  ssl: {
+    servername: env.POSTGRES_HOST,
+    rejectUnauthorized: true,
+    ca: env.SUPABASE_POSTGRES_CERT,
+  },
+});
 
 const makeInitialUsername = (authUserId: string, email: string): string => {
   // MVP: 衝突しづらい & 後で変更しやすい
