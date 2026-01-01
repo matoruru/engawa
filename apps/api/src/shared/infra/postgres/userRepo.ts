@@ -1,6 +1,5 @@
 import * as z from "zod";
 import type { UserId } from "@/shared/ids";
-import { UserIdSchema } from "@/shared/ids";
 import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
 import type { User, UserRepository } from "@/shared/ports/users";
 
