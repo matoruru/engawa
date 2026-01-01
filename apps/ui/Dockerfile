@@ -50,6 +50,18 @@ server {
   location /assets/ {
     try_files $uri =404;
   }
+  location /icons/ {
+    try_files $uri =404;
+  }
+  location /manifest.webmanifest {
+    try_files $uri =404;
+  }
+  location /apple-touch-icon.png {
+    try_files $uri =404;
+  }
+  location /favicon.ico {
+    try_files $uri =404;
+  }
 
   # SPA ルーティング（/profile 等）対策
   location / {

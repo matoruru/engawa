@@ -1,7 +1,7 @@
 {
   "name": "Idobata",
   "short_name": "Idobata",
-  "description": "Ido Bata for PWA",
+  "description": "Idobata for PWA",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
