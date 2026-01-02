@@ -23,3 +23,14 @@ export const createPostgresClient = (
       rejectUnauthorized: false,
     },
   });
+
+export const testDBConnection = async (db: PostgresClient) => {
+  console.log('Testing DB connection... (for application)');
+  try {
+    await db`SELECT 1 as ok`;
+    console.log('DB connection successful! (for application)');
+  } catch (error) {
+    console.error('DB connection failed... (for application)');
+    throw error;
+  }
+};

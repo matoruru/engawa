@@ -16,11 +16,11 @@ const pool = new Pool({
 });
 
 export const checkDBConnection = async () => {
-  console.log('Checking DB connection...');
+  console.log('Checking DB connection... (for auth)');
   await pool.query('SELECT 1 as ok').then(() => {
-    console.log('DB connection successful!');
+    console.log('DB connection successful! (for auth)');
   }).catch((error) => {
-    console.error('DB connection failed...');
+    console.error('DB connection failed... (for auth)');
     throw error;
   });
 }
