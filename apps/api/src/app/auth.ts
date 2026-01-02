@@ -23,7 +23,8 @@ export const testDBConnection = () => {
   pool.query('SELECT 1 as ok').then(() => {
     console.log('DB connection successful!');
   }).catch((error) => {
-    console.error('DB connection failed...', error);
+    console.error('DB connection failed...');
+    throw error;
   });
 }
 

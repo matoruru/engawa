@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+export interface WsMessage {
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  clientMessageId: string;
+  messageText: string;
+  createdAt: string;
+}
+
 export function useWebSocket(url: string) {
   const [isConnected, setIsConnected] = useState(false);
   const [socketId, setSocketId] = useState<string | null>(null);

@@ -1,35 +1,14 @@
 import { ArrowLeft, LogOut, Pencil, Send, UserPlus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { v7 as uuidv7 } from "uuid";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApi } from "@/hooks/useApi";
+import { useConversationMessages } from "@/hooks/useConversationMessages";
 import { cn } from "@/lib/utils";
-import { useWebSocket, type WsMessage } from "../hooks/useWebSocket";
+import { useWebSocket } from "../hooks/useWebSocket";
 import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
-
-// APIのMessage型からWsMessage型への変換
-function convertApiMessageToWsMessage(message: {
-  readonly [x: string]: unknown;
-  readonly messageText: string & { __brand?: "MessageText" };
-  readonly createdAt: Date;
-}): WsMessage {
-  return {
-    messageId: String(message.messageId),
-    conversationId: String(message.conversationId),
-    senderId: String(message.senderId),
-    clientMessageId: String(message.clientMessageId),
-    messageText: String(message.messageText),
-    createdAt:
-      typeof message.createdAt === "string"
-        ? message.createdAt
-        : message.createdAt instanceof Date
-          ? message.createdAt.toISOString()
-          : new Date(message.createdAt).toISOString(),
-  };
-}
 
 interface ChatProps {
   conversationId: string;
@@ -48,10 +27,7 @@ export function Chat({
   onBack,
   updateUnreadCount,
 }: ChatProps) {
-  const [messages, setMessages] = useState<WsMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [conversationTitle, setConversationTitle] = useState<string | null>(
@@ -76,6 +52,16 @@ export function Chat({
 
   const app = useApi(apiUrl);
   const ws = useWebSocket(wsUrl);
+
+  // メッセージ管理をuseConversationMessagesフックに委譲
+  const { messages, isLoading, isSending, sendMessage } =
+    useConversationMessages({
+      conversationId,
+      currentUserId,
+      apiUrl,
+      wsUrl,
+      updateUnreadCount,
+    });
 
   // メッセージをスクロール位置の最下部に表示
   const scrollToBottom = useCallback(() => {
@@ -142,170 +128,13 @@ export function Chat({
     loadMembers();
   }, [conversationId, app]);
 
-  // 初期メッセージの読み込み
-  useEffect(() => {
-    const loadMessages = async () => {
-      try {
-        setIsLoading(true);
-        const response = await app.messages.sync.post({
-          conversationId,
-          limit: 50,
-        });
-
-        if (
-          response.data &&
-          "messages" in response.data &&
-          response.data.kind === "ok"
-        ) {
-          const apiMessages = response.data.messages;
-          const wsMessages: WsMessage[] = Array.from(apiMessages).map(
-            convertApiMessageToWsMessage,
-          );
-          setMessages(wsMessages);
-
-          // メッセージを読み込んだら、最新のメッセージIDでread cursorを更新
-          if (wsMessages.length > 0) {
-            const latestMessage = wsMessages[wsMessages.length - 1];
-            ws.send({
-              type: "read.update",
-              payload: {
-                conversationId,
-                lastReadMessageId: latestMessage.messageId,
-              },
-            });
-            // 未読数を0に更新
-            if (updateUnreadCount) {
-              updateUnreadCount(conversationId, 0);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load messages:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (ws.isConnected) {
-      loadMessages();
-    }
-  }, [conversationId, ws.isConnected, app, updateUnreadCount, ws.send]);
-
-  // WebSocketイベントの処理
-  useEffect(() => {
-    const unsubscribeMessageCreated = ws.on("message.created", (event) => {
-      setMessages((prev) => {
-        // messageIdで重複チェック
-        if (prev.some((m) => m.messageId === event.payload.messageId)) {
-          return prev;
-        }
-
-        // clientMessageIdで重複チェック（楽観的更新のメッセージを置き換え）
-        const existingIndex = prev.findIndex(
-          (m) => m.clientMessageId === event.payload.clientMessageId,
-        );
-
-        if (existingIndex >= 0) {
-          // 楽観的更新のメッセージを実際のメッセージで置き換え
-          const newMessages = [...prev];
-          newMessages[existingIndex] = event.payload;
-          return newMessages;
-        }
-
-        // 新規メッセージとして追加
-        return [...prev, event.payload];
-      });
-
-      // 会話を表示中なら、届いたメッセージまで既読にする
-      if (event.payload.conversationId === conversationId) {
-        ws.send({
-          type: "read.update",
-          payload: {
-            conversationId,
-            lastReadMessageId: event.payload.messageId,
-          },
-        });
-        updateUnreadCount?.(conversationId, 0);
-      }
-    });
-
-    const unsubscribeMessagesSynced = ws.on("messages.synced", (event) => {
-      if (event.payload.kind === "ok") {
-        setMessages(event.payload.messages);
-      }
-    });
-
-    return () => {
-      unsubscribeMessageCreated();
-      unsubscribeMessagesSynced();
-    };
-  }, [conversationId, updateUnreadCount, ws.send, ws.on]);
-
-  const handleSend = async () => {
+  // メッセージ送信ハンドラ
+  const handleSend = useCallback(async () => {
     if (!input.trim() || isSending) return;
-
     const messageText = input.trim();
-    const clientMessageId = uuidv7();
     setInput("");
-    setIsSending(true);
-
-    try {
-      // 楽観的更新: すぐにメッセージを表示
-      const optimisticMessage: WsMessage = {
-        messageId: `temp-${clientMessageId}`,
-        conversationId,
-        senderId: currentUserId,
-        clientMessageId,
-        messageText,
-        createdAt: new Date().toISOString(),
-      };
-
-      setMessages((prev) => [...prev, optimisticMessage]);
-
-      // WebSocket経由で送信
-      ws.send({
-        type: "message.send",
-        payload: {
-          conversationId,
-          clientMessageId,
-          messageText,
-        },
-      });
-
-      // 楽観的更新のメッセージは、実際のメッセージが来たら自動的に置き換わる
-      // タイムアウトで削除する（実際のメッセージが来なかった場合のフォールバック）
-      setTimeout(() => {
-        setMessages((prev) => {
-          // clientMessageIdで楽観的更新のメッセージを探す
-          const optimisticIndex = prev.findIndex(
-            (m) =>
-              m.clientMessageId === clientMessageId &&
-              m.messageId.startsWith("temp-"),
-          );
-          if (optimisticIndex >= 0) {
-            // 実際のメッセージがまだ来ていない場合のみ削除
-            const hasRealMessage = prev.some(
-              (m) =>
-                m.clientMessageId === clientMessageId &&
-                !m.messageId.startsWith("temp-"),
-            );
-            if (!hasRealMessage) {
-              return prev.filter((_, index) => index !== optimisticIndex);
-            }
-          }
-          return prev;
-        });
-      }, 5000);
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      // エラー時は楽観的更新を削除
-      setMessages((prev) =>
-        prev.filter((m) => m.messageId !== `temp-${clientMessageId}`),
-      );
-    } finally {
-      setIsSending(false);
-    }
-  };
+    await sendMessage(messageText);
+  }, [input, isSending, sendMessage]);
 
   const [isComposing, setIsComposing] = useState(false);
 

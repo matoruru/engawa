@@ -95,10 +95,20 @@ export const makeHttpHandlers = (svc: AppServices) => ({
   },
 
   getCurrentUser: async (userId: UserId) => {
+    // キャッシュから取得を試みる
+    const cacheKey = `user:${userId}`;
+    const cached = await svc.cache.get<{ id: string; username: string; displayName: string; avatarUrl: string | null }>(cacheKey);
+    if (cached) {
+      return { user: cached };
+    }
+
     const user = await svc.userRepo.findById(userId);
     if (!user) {
       return { error: "USER_NOT_FOUND" };
     }
+
+    // キャッシュに保存（5分間）
+    await svc.cache.set(cacheKey, user, 300);
     return { user };
   },
 
@@ -226,6 +236,8 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     const result = await svc.updateConversationTitle(input);
 
     if (result.kind === "updated") {
+      // キャッシュを無効化
+      await svc.cache.delete(`conversation:title:${conversationId}`);
       return { success: true };
     } else if (result.kind === "forbidden") {
       return { success: false, error: result.reason };

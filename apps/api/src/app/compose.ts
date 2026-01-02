@@ -12,6 +12,8 @@ import {
   type PostgresClient,
 } from "@/shared/infra/postgres/postgresClient";
 import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
+import { makeInMemoryCache } from "@/shared/infra/cache/inMemoryCache";
+import type { CacheStore } from "@/shared/infra/cache/cachePort";
 import { uuidv7 } from "@/shared/uuid";
 import { makePostgresConversationMembersRepo } from "../features/conversations/infra/postgres/conversationMembersRepo";
 import { makePostgresConversationRepo } from "../features/conversations/infra/postgres/conversationRepo";
@@ -106,6 +108,7 @@ const UserIdRowSchema = z.object({ user_id: z.string() });
 
 export type AppServices = {
   db: PostgresClient;
+  cache: CacheStore;
   membersRepo: ReturnType<typeof makePostgresConversationMembersRepo>;
   resolveAppUserIdFromBetterAuthUserId: (
     authUserId: string,
@@ -155,6 +158,8 @@ export const composeApp = (): AppServices => {
     POSTGRES_PASSWORD: env.POSTGRES_PASSWORD,
     POSTGRES_DATABASE: env.POSTGRES_DATABASE,
   }, env.SUPABASE_POSTGRES_CERT);
+
+  const cache = makeInMemoryCache();
 
   const resolveAppUserIdFromAuthUserId = async (
     authUserId: string,
@@ -219,11 +224,8 @@ export const composeApp = (): AppServices => {
   });
 
   const listConversations = makeListConversations({
+    db,
     membersRepo,
-    messageQueryRepo,
-    conversationRepo,
-    readsRepo,
-    userRepo,
   });
 
   const getConversation = makeGetConversation({
@@ -284,6 +286,7 @@ export const composeApp = (): AppServices => {
 
   return {
     db,
+    cache,
     membersRepo,
     resolveAppUserIdFromBetterAuthUserId: resolveAppUserIdFromAuthUserId,
     sendMessage,
