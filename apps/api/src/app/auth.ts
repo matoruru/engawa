@@ -20,6 +20,7 @@ const pool = new Pool({
 });
 
 export const checkDBConnection = async () => {
+  console.log('Checking DB connection...');
   await pool.query('SELECT 1 as ok').then(() => {
     console.log('DB connection successful!');
   }).catch((error) => {
