@@ -19,6 +19,14 @@ const pool = new Pool({
   } : {}),
 });
 
+export const testDBConnection = () => {
+  pool.query('SELECT 1 as ok').then(() => {
+    console.log('DB connection successful!');
+  }).catch((error) => {
+    console.error('DB connection failed!', error);
+  });
+}
+
 const makeInitialUsername = (authUserId: string, email: string): string => {
   // MVP: 衝突しづらい & 後で変更しやすい
   const local = email.split("@")[0] ?? "user";
