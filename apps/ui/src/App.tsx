@@ -289,7 +289,7 @@ function ConversationChat({
   }
 
   return (
-    <div className="h-dvh w-dvw overflow-hidden">
+    <div className="h-full w-full overflow-hidden fixed inset-0">
       <Chat
         conversationId={conversationId}
         currentUserId={currentUserId}
