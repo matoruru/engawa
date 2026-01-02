@@ -25,9 +25,7 @@ const getAppUserIdByBetterAuthUserId = async (
 };
 
 export const makeBetterAuthPlugin = (db: PostgresClient) => {
-  return new Elysia({ name: "better-auth" })
-    .mount(auth.handler)
-    .macro({
+  return new Elysia({ name: "better-auth" }).mount(auth.handler).macro({
     auth: {
       async resolve({ status, request: { headers } }) {
         const session = await auth.api.getSession({ headers });
