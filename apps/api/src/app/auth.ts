@@ -10,13 +10,9 @@ const pool = new Pool({
   user: env.POSTGRES_USER,
   password: env.POSTGRES_PASSWORD,
   database: env.POSTGRES_DATABASE,
-  ...(env.SUPABASE_POSTGRES_CERT ? {
-    ssl: {
-      rejectUnauthorized: true,
-      requestCert: true,
-      ca: env.SUPABASE_POSTGRES_CERT,
-    },
-  } : {}),
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 export const checkDBConnection = async () => {

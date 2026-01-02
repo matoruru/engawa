@@ -6,7 +6,6 @@ const EnvSchema = z.object({
   POSTGRES_USER: z.string().min(1),
   POSTGRES_PASSWORD: z.string().min(1),
   POSTGRES_DATABASE: z.string().min(1),
-  SUPABASE_POSTGRES_CERT: z.string().optional(),
 
   // セッショントークン（JWT）検証用
   SESSION_JWT_SECRET: z.string().min(1),
