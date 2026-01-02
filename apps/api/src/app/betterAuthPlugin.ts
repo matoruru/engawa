@@ -15,29 +15,35 @@ const getAppUserIdByBetterAuthUserId = async (
   `;
 
   // databaseHooks が正しく動いていれば必ずある想定
-  return UserIdSchema.parse(rows[0]?.user_id);
+  const userId = rows[0]?.user_id;
+  if (!userId) {
+    throw new Error(
+      `User identity not found for better-auth user: ${betterAuthUserId}`,
+    );
+  }
+  return UserIdSchema.parse(userId);
 };
 
 export const makeBetterAuthPlugin = (db: PostgresClient) => {
   return new Elysia({ name: "better-auth" })
     .mount(auth.handler)
     .macro({
-      auth: {
-        async resolve({ status, request: { headers } }) {
-          const session = await auth.api.getSession({ headers });
-          if (!session) return status(401);
+    auth: {
+      async resolve({ status, request: { headers } }) {
+        const session = await auth.api.getSession({ headers });
+        if (!session) return status(401);
 
-          const userId = await getAppUserIdByBetterAuthUserId(
-            db,
-            session.user.id,
-          );
+        const userId = await getAppUserIdByBetterAuthUserId(
+          db,
+          session.user.id,
+        );
 
-          return {
-            user: session.user,
-            session: session.session,
-            userId, // アプリのユーザID
-          };
-        },
+        return {
+          user: session.user,
+          session: session.session,
+          userId, // アプリのユーザID
+        };
       },
-    });
+    },
+  });
 };

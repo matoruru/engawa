@@ -4,8 +4,10 @@ import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
 import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { Message } from "../../messages/domain";
 import { MessageSchema } from "../../messages/domain";
-import { MessageRowSchema } from "../../messages/infra/postgres/messageRow";
-import { messageRowToDomainInput } from "../../messages/infra/postgres/messageRow";
+import {
+  MessageRowSchema,
+  messageRowToDomainInput,
+} from "../../messages/infra/postgres/messageRow";
 
 export const ListConversationsInputSchema = z.object({
   userId: UserIdSchema,
@@ -48,7 +50,12 @@ const ConversationPreviewRowSchema = z.object({
   sender_display_name: z.string().nullable(),
   unread_count: z.number().int(),
   latest_message_created_at: z.date().nullable(),
-  row_num: z.number().int(),
+  row_num: z.preprocess((val) => {
+    if (val === null || val === undefined) return null;
+    if (typeof val === "string") return parseInt(val, 10);
+    if (typeof val === "number") return val;
+    return null;
+  }, z.number().int().nullable()),
 });
 
 export const makeListConversations =
@@ -87,7 +94,7 @@ export const makeListConversations =
           m.message_text,
           m.created_at AS message_created_at,
           u.display_name AS sender_display_name,
-          ROW_NUMBER() OVER (PARTITION BY m.conversation_id ORDER BY m.message_id DESC) AS row_num
+          ROW_NUMBER() OVER (PARTITION BY m.conversation_id ORDER BY m.message_id DESC)::int AS row_num
         FROM messages m
         INNER JOIN user_conversations uc ON m.conversation_id = uc.conversation_id
         LEFT JOIN users u ON m.sender_id = u.id
@@ -135,15 +142,25 @@ export const makeListConversations =
         });
       }
 
-      const conv = conversationMap.get(convId)!;
-      if (row.message_id && row.row_num <= 2) {
+      const conv = conversationMap.get(convId);
+      if (!conv) continue;
+
+      if (
+        row.message_id &&
+        row.sender_id &&
+        row.client_message_id &&
+        row.message_text &&
+        row.message_created_at &&
+        row.row_num !== null &&
+        row.row_num <= 2
+      ) {
         const messageRow = MessageRowSchema.parse({
           message_id: row.message_id,
           conversation_id: row.conversation_id,
-          sender_id: row.sender_id!,
-          client_message_id: row.client_message_id!,
-          message_text: row.message_text!,
-          created_at: row.message_created_at!,
+          sender_id: row.sender_id,
+          client_message_id: row.client_message_id,
+          message_text: row.message_text,
+          created_at: row.message_created_at,
         });
         const message = MessageSchema.parse(
           messageRowToDomainInput(messageRow),
