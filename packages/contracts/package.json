@@ -1,5 +1,5 @@
 {
-  "name": "@idobata/contracts",
+  "name": "@engawa/contracts",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@idobata/api": "workspace:*"
+    "@engawa/api": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

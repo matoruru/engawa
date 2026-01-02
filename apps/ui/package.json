@@ -1,5 +1,5 @@
 {
-  "name": "@idobata/ui",
+  "name": "@engawa/ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.6",
-    "@idobata/contracts": "workspace:*",
+    "@engawa/contracts": "workspace:*",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",

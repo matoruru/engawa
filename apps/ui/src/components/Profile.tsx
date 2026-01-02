@@ -1,7 +1,8 @@
 import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@idobata/contracts";
+import type { App as AppContract } from "@engawa/contracts";
 import { Check, LogOut, Pencil, User as UserIcon, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useApi } from "@/hooks/useApi";
 import { cn } from "@/lib/utils";
 import { FriendsList } from "./FriendsList";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -14,7 +15,6 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Input } from "./ui/input";
-import { useApi } from "@/hooks/useApi";
 
 interface User {
   id: string;

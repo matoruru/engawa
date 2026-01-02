@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+// TODO: React Routerに移行したのでこれは消したい
+
 /**
  * ブラウザのLocation APIをラップしたカスタムフック
  * URLの読み取りと更新を管理する

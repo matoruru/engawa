@@ -41,10 +41,7 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
   useEffect(() => {
     const loadInvite = async () => {
       try {
-        const response = await fetch(`${apiUrl}/invites/${token}`, {
-          method: "GET",
-          credentials: "include",
-        });
+        const response = await api.invites.get({ token });
         
         if (response.ok) {
           const data = await response.json();

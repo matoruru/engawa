@@ -1,5 +1,5 @@
 import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@idobata/contracts";
+import type { App as AppContract } from "@engawa/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBetterAuthClient } from "../lib/authClient";
 import { useApi } from "./useApi";

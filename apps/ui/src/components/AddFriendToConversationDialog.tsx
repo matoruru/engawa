@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { treaty } from "@elysiajs/eden";
+import type { App as AppContract } from "@engawa/contracts";
+import { UserPlus, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useApi } from "@/hooks/useApi";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { X, UserPlus } from "lucide-react";
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@idobata/contracts";
-import { useApi } from "@/hooks/useApi";
 
 interface Friend {
   id: string;
@@ -57,7 +57,7 @@ export function AddFriendToConversationDialog({
             {
               method: "GET",
               credentials: "include",
-            }
+            },
           );
           if (membersResponse.ok) {
             const membersData = await membersResponse.json();
@@ -80,7 +80,7 @@ export function AddFriendToConversationDialog({
 
   // 既にメンバーの友達を除外
   const availableFriends = friends.filter(
-    (friend) => !members.some((member) => member.id === friend.id)
+    (friend) => !members.some((member) => member.id === friend.id),
   );
 
   const handleInvite = async (friendId: string) => {
@@ -95,7 +95,7 @@ export function AddFriendToConversationDialog({
           },
           credentials: "include",
           body: JSON.stringify({ userId: friendId }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -162,7 +162,10 @@ export function AddFriendToConversationDialog({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       {friend.avatarUrl ? (
-                        <AvatarImage src={friend.avatarUrl} alt={friend.displayName} />
+                        <AvatarImage
+                          src={friend.avatarUrl}
+                          alt={friend.displayName}
+                        />
                       ) : (
                         <AvatarFallback>
                           {getInitials(friend.displayName)}
@@ -170,7 +173,9 @@ export function AddFriendToConversationDialog({
                       )}
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium">{friend.displayName}</p>
+                      <p className="text-sm font-medium">
+                        {friend.displayName}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         @{friend.username}
                       </p>
@@ -194,4 +199,3 @@ export function AddFriendToConversationDialog({
     </div>
   );
 }
-

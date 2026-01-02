@@ -26,9 +26,9 @@ export default defineConfig({
         "icons/apple-touch-icon.png",
       ],
       manifest: {
-        name: "Idobata",
-        short_name: "Idobata",
-        description: "Idobata for PWA",
+        name: "Engawa",
+        short_name: "Engawa",
+        description: "Engawa for PWA",
         start_url: "/",
         scope: "/",
         display: "standalone",
