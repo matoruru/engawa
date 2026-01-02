@@ -12,7 +12,6 @@ export const createPostgresClient = (
     | "POSTGRES_PASSWORD"
     | "POSTGRES_DATABASE"
   >,
-  supabasePostgresCert?: string,
 ): PostgresClient =>
   new SQL({
     host: env.POSTGRES_HOST,
@@ -20,11 +19,7 @@ export const createPostgresClient = (
     user: env.POSTGRES_USER,
     password: env.POSTGRES_PASSWORD,
     database: env.POSTGRES_DATABASE,
-    ...(supabasePostgresCert ? {
-      tls: {
-        rejectUnauthorized: true,
-        requestCert: true,
-        ca: supabasePostgresCert,
-      },
-    } : {}),
+    tls: {
+      rejectUnauthorized: false,
+    },
   });

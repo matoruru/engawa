@@ -157,7 +157,7 @@ export const composeApp = (): AppServices => {
     POSTGRES_USER: env.POSTGRES_USER,
     POSTGRES_PASSWORD: env.POSTGRES_PASSWORD,
     POSTGRES_DATABASE: env.POSTGRES_DATABASE,
-  }, env.SUPABASE_POSTGRES_CERT);
+  });
 
   const cache = makeInMemoryCache();
 
