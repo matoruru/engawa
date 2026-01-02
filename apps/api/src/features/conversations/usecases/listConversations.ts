@@ -4,7 +4,7 @@ import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
 import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { Message } from "../../messages/domain";
 import { MessageSchema } from "../../messages/domain";
-import type { MessageRowSchema } from "../../messages/infra/postgres/messageRow";
+import { MessageRowSchema } from "../../messages/infra/postgres/messageRow";
 import { messageRowToDomainInput } from "../../messages/infra/postgres/messageRow";
 
 export const ListConversationsInputSchema = z.object({
@@ -137,14 +137,14 @@ export const makeListConversations =
 
       const conv = conversationMap.get(convId)!;
       if (row.message_id && row.row_num <= 2) {
-        const messageRow = {
+        const messageRow = MessageRowSchema.parse({
           message_id: row.message_id,
           conversation_id: row.conversation_id,
           sender_id: row.sender_id!,
           client_message_id: row.client_message_id!,
           message_text: row.message_text!,
           created_at: row.message_created_at!,
-        };
+        });
         const message = MessageSchema.parse(
           messageRowToDomainInput(messageRow),
         );
@@ -173,6 +173,7 @@ export const makeListConversations =
           (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
         ),
         unreadCount: conv.unreadCount,
+        latestMessageCreatedAt: conv.latestMessageCreatedAt,
       }));
 
     return {

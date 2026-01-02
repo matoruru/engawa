@@ -1,5 +1,6 @@
 import { SQL } from "bun";
 import type { Env } from "@/shared/env";
+import { isDevRuntime } from "@/shared/runtime";
 
 export type PostgresClient = SQL;
 
@@ -19,9 +20,11 @@ export const createPostgresClient = (
     user: env.POSTGRES_USER,
     password: env.POSTGRES_PASSWORD,
     database: env.POSTGRES_DATABASE,
-    tls: {
-      rejectUnauthorized: false,
-    },
+    ...(isDevRuntime() ? {} : {
+      tls: {
+        rejectUnauthorized: false,
+      }
+    })
   });
 
 export const testDBConnection = async (db: PostgresClient) => {
