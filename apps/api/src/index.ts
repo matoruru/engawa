@@ -1,7 +1,7 @@
 import { logger } from "@bogeychan/elysia-logger";
 import cors from "@elysiajs/cors";
 import { Elysia, t } from "elysia";
-import { checkDBConnection } from "./app/auth";
+import { checkDBConnection as checkDBConnectionForAuth } from "./app/auth";
 import { makeBetterAuthPlugin } from "./app/betterAuthPlugin";
 import { composeApp } from "./app/compose";
 import { makeHttpHandlers } from "./app/httpHandlers";
@@ -9,12 +9,15 @@ import { sessionRoutes } from "./app/sessionRoutes";
 import { makeWsApp } from "./app/ws";
 import { env } from "./shared/env";
 import { ConversationIdSchema, UserIdSchema } from "./shared/ids";
+import { testDBConnection as testDBConnectionForApplication } from "./shared/infra/postgres/postgresClient";
 import { isDevRuntime } from "./shared/runtime";
 
-// Test DB connection at startup
-await checkDBConnection();
-
 const services = composeApp();
+
+// Test DB connection at startup
+await checkDBConnectionForAuth();
+await testDBConnectionForApplication(services.db);
+
 const handlers = makeHttpHandlers(services);
 
 const app = new Elysia()
