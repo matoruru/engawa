@@ -338,7 +338,7 @@ export function Chat({
   return (
     <div className="flex h-dvh flex-col bg-background">
       {/* ヘッダー */}
-      <div className="border-b border-border bg-card">
+      <div className="sticky top-0 z-10 border-b border-border bg-card">
         {/* メンバー一覧 */}
         <div className="px-4 py-2 border-b border-border">
           <div className="flex items-center gap-2 overflow-x-auto">
