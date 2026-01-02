@@ -336,7 +336,7 @@ export function Chat({
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-background">
       {/* ヘッダー */}
       <div className="border-b border-border bg-card">
         {/* メンバー一覧 */}
