@@ -336,9 +336,9 @@ export function Chat({
   };
 
   return (
-    <div className="flex h-full flex-col bg-background fixed inset-0">
+    <div className="flex h-dvh flex-col bg-background">
       {/* ヘッダー */}
-      <div className="border-b border-border bg-card shrink-0">
+      <div className="border-b border-border bg-card">
         {/* メンバー一覧 */}
         <div className="px-4 py-2 border-b border-border">
           <div className="flex items-center gap-2 overflow-x-auto">
@@ -524,7 +524,7 @@ export function Chat({
       </ScrollArea>
 
       {/* 入力エリア */}
-      <div className="border-t border-border bg-card p-4 safe-area-inset-bottom shrink-0">
+      <div className="border-t border-border bg-card p-4 safe-area-inset-bottom">
         {/* タイピング表示（スクロール領域の外に固定） */}
         <div
           className={cn(
