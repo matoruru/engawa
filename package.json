@@ -7,8 +7,9 @@
     "packages/*"
   ],
   "scripts": {
+    "dev:api:docker": "bun run --cwd apps/api db:up",
     "dev:api": "bun --cwd apps/api dev",
-    "dev:ui": "bun --cwd apps/ui dev",
+    "dev:ui": "bun --cwd apps/ui dev --host",
     "test:api": "bun --cwd apps/api test",
     "build:ui": "bun --cwd apps/ui build"
   },

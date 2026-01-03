@@ -22,13 +22,13 @@ const handlers = makeHttpHandlers(services);
 
 const app = new Elysia()
   .use(logger())
-  .use(makeBetterAuthPlugin(services.db))
   .use(
     cors({
       origin: env.ALLOWED_ORIGINS.split(","),
       credentials: true, // Allow cookies
     }),
   )
+  .use(makeBetterAuthPlugin(services.db))
   .use(makeWsApp(services))
   .get("/healthz", () => ({ ok: true }))
   .post(
@@ -184,8 +184,14 @@ if (isDevRuntime()) {
   app.use(sessionRoutes);
 }
 
-app.listen(env.PORT, () => {
-  console.log(`Listening on http://localhost:${env.PORT}`);
-});
+app.listen(
+  {
+    port: env.PORT,
+    hostname: "0.0.0.0",
+  },
+  ({ port, hostname }) => {
+    console.log(`Listening on http://${hostname}:${port}`);
+  },
+);
 
 export type App = typeof app;
