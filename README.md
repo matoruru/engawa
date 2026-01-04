@@ -10,29 +10,11 @@ bun run dev:api:docker
 
 ### 2. Prepare environment variables
 
-Prepare this `.env` at the project root and `apps/api`.
+Copy the `.env.example` as `.env` at the project root and `apps/api`.
 
 > [!TIP]
 > It's better to set local IP directly for preview on mobile or other laptop inside the LAN.
 > Setting `localhost` caused many issues for CORS and secure cookie...
-
-```
-NODE_ENV=development
-PORT=3000
-POSTGRES_USER=chat
-POSTGRES_PASSWORD=chat
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DATABASE=chat
-POSTGRES_TEST_URL=postgres://chat:chat@localhost:5432/chat_test?sslmode=disable
-DATABASE_URL=postgres://chat:chat@localhost:5432/chat?sslmode=disable
-SESSION_JWT_SECRET=dev-secret-change-me
-BETTER_AUTH_SECRET=dev-secret-change-me-please-at-least-32-chars
-BETTER_AUTH_URL=http://192.168.11.5:3000
-BETTER_AUTH_GOOGLE_CLIENT_ID=<Get from https://console.cloud.google.com/auth/clients>
-BETTER_AUTH_GOOGLE_CLIENT_SECRET=<Get from Key vault>
-ALLOWED_ORIGINS="http://192.168.11.5:5173"
-```
 
 ### 3. Migrate DB schemas
 
