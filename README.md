@@ -25,6 +25,14 @@ bun db:migrate:up
 cd -
 ```
 
+**For test**
+```
+cd apps/api
+bun db:migrate:status
+bun db:migrate:test:up
+cd -
+```
+
 ### 4. Run dev servers
 
 **API server:**

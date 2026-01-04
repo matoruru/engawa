@@ -7,6 +7,8 @@
     "test:e2e:usecases": "bun test test/e2e/usecases",
     "test:e2e:infra": "bun test test/e2e/infra",
     "test:e2e": "bun test test/e2e",
+    "db:migrate:test:up": "DATABASE_URL='postgres://chat:chat@localhost:5432/chat_test?sslmode=disable' bun db:migrate:up",
+    "db:migrate:test:status": "DATABASE_URL='postgres://chat:chat@localhost:5432/chat_test?sslmode=disable' bun db:migrate:status",
     "dev": "bun run --watch src/index.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
