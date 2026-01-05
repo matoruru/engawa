@@ -1,6 +1,6 @@
 import * as z from "zod";
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import { ConversationIdSchema, UserIdSchema } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { ConversationRepository } from "../ports";
 
 export const GetConversationInputSchema = z.object({
@@ -27,7 +27,9 @@ export const makeGetConversation =
     if (title === null) {
       // 会話が存在しない可能性がある（getTitleがnullを返す場合、会話が存在しないか、titleがnull）
       // メンバーシップを確認して、会話が存在するか判定
-      const members = await deps.membersRepo.listByConversationId(input.conversationId);
+      const members = await deps.membersRepo.listByConversationId(
+        input.conversationId,
+      );
       if (members.length === 0) {
         return { kind: "notFound" };
       }
@@ -48,4 +50,3 @@ export const makeGetConversation =
       title: title,
     };
   };
-

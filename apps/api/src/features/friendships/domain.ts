@@ -9,9 +9,9 @@ export const FriendshipSchema = z.object({
 export type Friendship = z.infer<typeof FriendshipSchema>;
 
 export const FriendInfoSchema = z.object({
-  id: UserIdSchema,
+  userId: UserIdSchema,
   username: z.string(),
   displayName: z.string(),
-  avatarUrl: z.string().nullable(),
+  avatarUrl: z.url().nullable(),
 });
 export type FriendInfo = z.infer<typeof FriendInfoSchema>;

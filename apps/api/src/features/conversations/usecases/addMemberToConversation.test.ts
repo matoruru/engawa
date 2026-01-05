@@ -1,12 +1,11 @@
 import { describe, expect, it } from "bun:test";
-
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import {
   type ConversationId,
   ConversationIdSchema,
   type UserId,
   UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import { makeAddMemberToConversation } from "./addMemberToConversation";
 
 // --- Test doubles ---
@@ -15,17 +14,27 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly conversationsByUser = new Map<UserId, ConversationId[]>();
   private readonly usersByConversation = new Map<ConversationId, UserId[]>();
 
-  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async addMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
-    
+
     const userConversations = this.conversationsByUser.get(userId) || [];
     if (!userConversations.includes(conversationId)) {
-      this.conversationsByUser.set(userId, [...userConversations, conversationId]);
+      this.conversationsByUser.set(userId, [
+        ...userConversations,
+        conversationId,
+      ]);
     }
-    
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
+
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
     if (!conversationUsers.includes(userId)) {
-      this.usersByConversation.set(conversationId, [...conversationUsers, userId]);
+      this.usersByConversation.set(conversationId, [
+        ...conversationUsers,
+        userId,
+      ]);
     }
   }
 
@@ -40,16 +49,28 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
     return this.conversationsByUser.get(userId) || [];
   }
 
-  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+  async listByConversationId(
+    conversationId: ConversationId,
+  ): Promise<readonly UserId[]> {
     return this.usersByConversation.get(conversationId) || [];
   }
 
-  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async removeMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.delete(`${conversationId}|${userId}`);
     const userConversations = this.conversationsByUser.get(userId) || [];
-    this.conversationsByUser.set(userId, userConversations.filter(cid => cid !== conversationId));
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
-    this.usersByConversation.set(conversationId, conversationUsers.filter(uid => uid !== userId));
+    this.conversationsByUser.set(
+      userId,
+      userConversations.filter((cid) => cid !== conversationId),
+    );
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
+    this.usersByConversation.set(
+      conversationId,
+      conversationUsers.filter((uid) => uid !== userId),
+    );
   }
 }
 
@@ -63,7 +84,9 @@ describe("addMemberToConversation (feature/conversations)", () => {
     const membersRepo = new InMemoryMembersRepo();
     await membersRepo.addMember(cid, uid);
 
-    const addMemberToConversation = makeAddMemberToConversation({ membersRepo });
+    const addMemberToConversation = makeAddMemberToConversation({
+      membersRepo,
+    });
 
     const res = await addMemberToConversation({
       userId: uid,
@@ -72,7 +95,7 @@ describe("addMemberToConversation (feature/conversations)", () => {
     });
 
     expect(res.kind).toBe("added");
-    
+
     const isMember = await membersRepo.isMember(cid, uid2);
     expect(isMember).toBe(true);
   });
@@ -81,7 +104,9 @@ describe("addMemberToConversation (feature/conversations)", () => {
     const membersRepo = new InMemoryMembersRepo();
     // uid をメンバーに追加しない
 
-    const addMemberToConversation = makeAddMemberToConversation({ membersRepo });
+    const addMemberToConversation = makeAddMemberToConversation({
+      membersRepo,
+    });
 
     const res = await addMemberToConversation({
       userId: uid,
@@ -93,7 +118,7 @@ describe("addMemberToConversation (feature/conversations)", () => {
     if (res.kind === "forbidden") {
       expect(res.reason).toBe("NOT_A_MEMBER");
     }
-    
+
     const isMember = await membersRepo.isMember(cid, uid2);
     expect(isMember).toBe(false);
   });
@@ -103,7 +128,9 @@ describe("addMemberToConversation (feature/conversations)", () => {
     await membersRepo.addMember(cid, uid);
     await membersRepo.addMember(cid, uid2); // 既にメンバー
 
-    const addMemberToConversation = makeAddMemberToConversation({ membersRepo });
+    const addMemberToConversation = makeAddMemberToConversation({
+      membersRepo,
+    });
 
     const res = await addMemberToConversation({
       userId: uid,
@@ -117,4 +144,3 @@ describe("addMemberToConversation (feature/conversations)", () => {
     }
   });
 });
-

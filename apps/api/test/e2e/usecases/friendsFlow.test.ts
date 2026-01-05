@@ -8,16 +8,11 @@ import {
 } from "bun:test";
 import { makePostgresFriendshipsRepo } from "src/features/friendships/infra/postgres/friendshipsRepo";
 import { makeListFriends } from "src/features/friendships/usecases/listFriends";
-import {
-  UserIdSchema,
-} from "@/shared/ids";
+import { makePostgresUserRepo } from "@/shared/features/users/infra/postgres/userRepo";
+import { UserIdSchema } from "@/shared/ids";
 import { createPostgresClient } from "@/shared/infra/postgres/postgresClient";
-import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
-import {
-  resetDb,
-  seedFriendship,
-  seedUser,
-} from "../../helpers/seed";
+import { resetDb, seedFriendship, seedUser } from "../../helpers/seed";
+import { makeInMemoryCache } from "@/shared/infra/cache/inMemoryCache";
 
 describe("e2e/usecases: friends flow", () => {
   const db = createPostgresClient({
@@ -47,8 +42,9 @@ describe("e2e/usecases: friends flow", () => {
   });
 
   it("listFriends", async () => {
+    const cache = makeInMemoryCache();
     const friendshipsRepo = makePostgresFriendshipsRepo(db);
-    const userRepo = makePostgresUserRepo(db);
+    const userRepo = makePostgresUserRepo(db, cache);
 
     const listFriends = makeListFriends({ friendshipsRepo, userRepo });
 
@@ -59,7 +55,7 @@ describe("e2e/usecases: friends flow", () => {
     expect(r1.kind).toBe("ok");
     if (r1.kind !== "ok") throw new Error("Unexpected result");
     expect(r1.friends.length).toBe(1);
-    expect(r1.friends[0].id).toBe(uid2);
+    expect(r1.friends[0].userId).toBe(uid2);
 
     // uid2の友達一覧を取得
     const r2 = await listFriends({
@@ -68,6 +64,6 @@ describe("e2e/usecases: friends flow", () => {
     expect(r2.kind).toBe("ok");
     if (r2.kind !== "ok") throw new Error("Unexpected result");
     expect(r2.friends.length).toBe(1);
-    expect(r2.friends[0].id).toBe(uid1);
+    expect(r2.friends[0].userId).toBe(uid1);
   });
 });

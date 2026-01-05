@@ -1,7 +1,6 @@
 import * as z from "zod";
-import type { ConversationId, UserId } from "@/shared/ids";
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import { ConversationIdSchema, UserIdSchema } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { ConversationRepository } from "../ports";
 
 export const UpdateConversationTitleInputSchema = z.object({
@@ -9,7 +8,9 @@ export const UpdateConversationTitleInputSchema = z.object({
   conversationId: ConversationIdSchema,
   title: z.string().max(100).nullable(),
 });
-export type UpdateConversationTitleInput = z.infer<typeof UpdateConversationTitleInputSchema>;
+export type UpdateConversationTitleInput = z.infer<
+  typeof UpdateConversationTitleInputSchema
+>;
 
 export interface UpdateConversationTitleDeps {
   conversationRepo: ConversationRepository;
@@ -22,7 +23,9 @@ export type UpdateConversationTitleResult =
 
 export const makeUpdateConversationTitle =
   (deps: UpdateConversationTitleDeps) =>
-  async (input: UpdateConversationTitleInput): Promise<UpdateConversationTitleResult> => {
+  async (
+    input: UpdateConversationTitleInput,
+  ): Promise<UpdateConversationTitleResult> => {
     // 自分がメンバーかチェック
     const isMember = await deps.membersRepo.isMember(
       input.conversationId,
@@ -37,4 +40,3 @@ export const makeUpdateConversationTitle =
 
     return { kind: "updated" };
   };
-

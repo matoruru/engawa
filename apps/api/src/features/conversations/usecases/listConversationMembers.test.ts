@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
-
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
+import type { User } from "@/shared/features/users/domain";
+import type { UserRepository } from "@/shared/features/users/ports";
 import {
   type ConversationId,
   ConversationIdSchema,
   type UserId,
   UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
-import type { User, UserRepository } from "@/shared/ports/users";
 import { makeListConversationMembers } from "./listConversationMembers";
 
 // --- Test doubles ---
@@ -16,17 +16,27 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly conversationsByUser = new Map<UserId, ConversationId[]>();
   private readonly usersByConversation = new Map<ConversationId, UserId[]>();
 
-  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async addMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
-    
+
     const userConversations = this.conversationsByUser.get(userId) || [];
     if (!userConversations.includes(conversationId)) {
-      this.conversationsByUser.set(userId, [...userConversations, conversationId]);
+      this.conversationsByUser.set(userId, [
+        ...userConversations,
+        conversationId,
+      ]);
     }
-    
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
+
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
     if (!conversationUsers.includes(userId)) {
-      this.usersByConversation.set(conversationId, [...conversationUsers, userId]);
+      this.usersByConversation.set(conversationId, [
+        ...conversationUsers,
+        userId,
+      ]);
     }
   }
 
@@ -41,33 +51,50 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
     return this.conversationsByUser.get(userId) || [];
   }
 
-  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+  async listByConversationId(
+    conversationId: ConversationId,
+  ): Promise<readonly UserId[]> {
     return this.usersByConversation.get(conversationId) || [];
   }
 
-  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async removeMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.delete(`${conversationId}|${userId}`);
     const userConversations = this.conversationsByUser.get(userId) || [];
-    this.conversationsByUser.set(userId, userConversations.filter(cid => cid !== conversationId));
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
-    this.usersByConversation.set(conversationId, conversationUsers.filter(uid => uid !== userId));
+    this.conversationsByUser.set(
+      userId,
+      userConversations.filter((cid) => cid !== conversationId),
+    );
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
+    this.usersByConversation.set(
+      conversationId,
+      conversationUsers.filter((uid) => uid !== userId),
+    );
   }
 }
 
 class InMemoryUserRepo implements UserRepository {
-  private readonly users = new Map<string, User>();
+  private readonly users = new Map<UserId, User>();
 
-  addUser(id: string, username: string, displayName: string, avatarUrl: string | null = null) {
+  addUser(
+    id: UserId,
+    username: string,
+    displayName: string,
+    avatarUrl: string | null = null,
+  ) {
     this.users.set(id, { id, username, displayName, avatarUrl });
   }
 
   async findByIds(userIds: readonly UserId[]): Promise<readonly User[]> {
     return Array.from(userIds)
-      .map((id) => this.users.get(String(id)))
+      .map((id) => this.users.get(id))
       .filter((user): user is User => user !== undefined);
   }
   async findById(userId: UserId): Promise<User | null> {
-    return this.users.get(String(userId)) || null;
+    return this.users.get(userId) || null;
   }
   async findByUsername(username: string): Promise<User | null> {
     for (const user of this.users.values()) {
@@ -78,21 +105,24 @@ class InMemoryUserRepo implements UserRepository {
     return null;
   }
   async updateDisplayName(userId: UserId, displayName: string): Promise<void> {
-    const user = this.users.get(String(userId));
+    const user = this.users.get(userId);
     if (user) {
-      this.users.set(String(userId), { ...user, displayName });
+      this.users.set(userId, { ...user, displayName });
     }
   }
   async updateUsername(userId: UserId, username: string): Promise<void> {
-    const user = this.users.get(String(userId));
+    const user = this.users.get(userId);
     if (user) {
-      this.users.set(String(userId), { ...user, username });
+      this.users.set(userId, { ...user, username });
     }
   }
-  async updateAvatarUrl(userId: UserId, avatarUrl: string | null): Promise<void> {
-    const user = this.users.get(String(userId));
+  async updateAvatarUrl(
+    userId: UserId,
+    avatarUrl: string | null,
+  ): Promise<void> {
+    const user = this.users.get(userId);
     if (user) {
-      this.users.set(String(userId), { ...user, avatarUrl });
+      this.users.set(userId, { ...user, avatarUrl });
     }
   }
 }
@@ -105,14 +135,17 @@ const uid2 = UserIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e99");
 describe("listConversationMembers (feature/conversations)", () => {
   it("returns members when requester is a conversation member", async () => {
     const userRepo = new InMemoryUserRepo();
-    userRepo.addUser(String(uid), "user1", "User One");
-    userRepo.addUser(String(uid2), "user2", "User Two");
+    userRepo.addUser(uid, "user1", "User One");
+    userRepo.addUser(uid2, "user2", "User Two");
 
     const membersRepo = new InMemoryMembersRepo();
     await membersRepo.addMember(cid, uid);
     await membersRepo.addMember(cid, uid2);
 
-    const listConversationMembers = makeListConversationMembers({ userRepo, membersRepo });
+    const listConversationMembers = makeListConversationMembers({
+      userRepo,
+      membersRepo,
+    });
 
     const res = await listConversationMembers({
       userId: uid,
@@ -122,8 +155,8 @@ describe("listConversationMembers (feature/conversations)", () => {
     expect(res.kind).toBe("ok");
     if (res.kind === "ok") {
       expect(res.members.length).toBe(2);
-      expect(res.members.map((m) => m.id)).toContain(String(uid));
-      expect(res.members.map((m) => m.id)).toContain(String(uid2));
+      expect(res.members.map((m) => m.id)).toContain(uid);
+      expect(res.members.map((m) => m.id)).toContain(uid2);
     }
   });
 
@@ -132,7 +165,10 @@ describe("listConversationMembers (feature/conversations)", () => {
     const membersRepo = new InMemoryMembersRepo();
     // uid をメンバーに追加しない
 
-    const listConversationMembers = makeListConversationMembers({ userRepo, membersRepo });
+    const listConversationMembers = makeListConversationMembers({
+      userRepo,
+      membersRepo,
+    });
 
     const res = await listConversationMembers({
       userId: uid,
@@ -145,4 +181,3 @@ describe("listConversationMembers (feature/conversations)", () => {
     }
   });
 });
-

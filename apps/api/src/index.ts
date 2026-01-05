@@ -10,7 +10,6 @@ import { makeWsApp } from "./app/ws";
 import { env } from "./shared/env";
 import { ConversationIdSchema, UserIdSchema } from "./shared/ids";
 import { testDBConnection as testDBConnectionForApplication } from "./shared/infra/postgres/postgresClient";
-import { isDevRuntime } from "./shared/runtime";
 
 const services = composeApp();
 
@@ -178,20 +177,16 @@ const app = new Elysia()
         token: t.String(),
       }),
     },
+  )
+  .use(sessionRoutes)
+  .listen(
+    {
+      port: env.PORT,
+      hostname: "0.0.0.0",
+    },
+    ({ port, hostname }) => {
+      console.log(`Listening on http://${hostname}:${port}`);
+    },
   );
-
-if (isDevRuntime()) {
-  app.use(sessionRoutes);
-}
-
-app.listen(
-  {
-    port: env.PORT,
-    hostname: "0.0.0.0",
-  },
-  ({ port, hostname }) => {
-    console.log(`Listening on http://${hostname}:${port}`);
-  },
-);
 
 export type App = typeof app;

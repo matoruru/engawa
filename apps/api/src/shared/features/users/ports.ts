@@ -1,11 +1,5 @@
 import type { UserId } from "@/shared/ids";
-
-export type User = {
-  id: string;
-  username: string;
-  displayName: string;
-  avatarUrl: string | null;
-};
+import type { User } from "./domain";
 
 export interface UserRepository {
   findByIds(userIds: readonly UserId[]): Promise<readonly User[]>;
@@ -15,4 +9,3 @@ export interface UserRepository {
   updateUsername(userId: UserId, username: string): Promise<void>;
   updateAvatarUrl(userId: UserId, avatarUrl: string | null): Promise<void>;
 }
-

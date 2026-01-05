@@ -6,26 +6,27 @@ import {
 } from "@/shared/ids";
 import type { FriendshipsRepository } from "../ports";
 import { makeRemoveFriend } from "./removeFriend";
+import type { FriendInfo, Friendship } from "../domain";
 
 // --- Test doubles ---
 class InMemoryFriendshipsRepo implements FriendshipsRepository {
-  private readonly friendships = new Set<string>();
+  private readonly friendships = new Set<Friendship>();
 
   async addFriendship(userId: UserId, friendId: UserId): Promise<void> {
-    this.friendships.add(`${userId}|${friendId}`);
-    this.friendships.add(`${friendId}|${userId}`);
+    this.friendships.add({ userId, friendId, createdAt: new Date() });
+    this.friendships.add({ userId: friendId, friendId: userId, createdAt: new Date() });
   }
 
   async removeFriendship(userId: UserId, friendId: UserId): Promise<void> {
-    this.friendships.delete(`${userId}|${friendId}`);
-    this.friendships.delete(`${friendId}|${userId}`);
+    this.friendships.delete({ userId, friendId, createdAt: new Date() });
+    this.friendships.delete({ userId: friendId, friendId: userId, createdAt: new Date() });
   }
 
   async isFriend(userId: UserId, friendId: UserId): Promise<boolean> {
-    return this.friendships.has(`${userId}|${friendId}`);
+    return this.friendships.has({ userId, friendId, createdAt: new Date() });
   }
 
-  async listFriends(userId: UserId): Promise<readonly Array<{ id: string; username: string; displayName: string; avatarUrl: string | null }>> {
+  async listFriends(_userId: UserId): Promise<readonly FriendInfo[]> {
     return [];
   }
 }

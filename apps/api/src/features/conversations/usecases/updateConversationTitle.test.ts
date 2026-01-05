@@ -1,12 +1,11 @@
 import { describe, expect, it } from "bun:test";
-
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import {
   type ConversationId,
   ConversationIdSchema,
   type UserId,
   UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { ConversationRepository } from "../ports";
 import { makeUpdateConversationTitle } from "./updateConversationTitle";
 
@@ -14,7 +13,10 @@ import { makeUpdateConversationTitle } from "./updateConversationTitle";
 class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly members = new Set<string>();
 
-  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async addMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
   }
 
@@ -25,34 +27,42 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
     return this.members.has(`${conversationId}|${userId}`);
   }
 
-  async listByUserId(userId: UserId): Promise<readonly ConversationId[]> {
+  async listByUserId(_userId: UserId): Promise<readonly ConversationId[]> {
     return [];
   }
 
-  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+  async listByConversationId(
+    _conversationId: ConversationId,
+  ): Promise<readonly UserId[]> {
     return [];
   }
 
-  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async removeMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.delete(`${conversationId}|${userId}`);
   }
 }
 
 class InMemoryConversationRepo implements ConversationRepository {
-  private readonly conversations = new Set<string>();
+  private readonly conversations = new Set<ConversationId>();
   private readonly titles = new Map<string, string | null>();
 
   async create(conversationId: ConversationId): Promise<void> {
-    this.conversations.add(String(conversationId));
-    this.titles.set(String(conversationId), null);
+    this.conversations.add(conversationId);
+    this.titles.set(conversationId, null);
   }
 
-  async updateTitle(conversationId: ConversationId, title: string | null): Promise<void> {
-    this.titles.set(String(conversationId), title);
+  async updateTitle(
+    conversationId: ConversationId,
+    title: string | null,
+  ): Promise<void> {
+    this.titles.set(conversationId, title);
   }
 
   async getTitle(conversationId: ConversationId): Promise<string | null> {
-    return this.titles.get(String(conversationId)) ?? null;
+    return this.titles.get(conversationId) ?? null;
   }
 }
 
@@ -132,4 +142,3 @@ describe("updateConversationTitle", () => {
     expect(await conversationRepo.getTitle(cid)).toBeNull();
   });
 });
-

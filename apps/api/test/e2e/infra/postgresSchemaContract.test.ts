@@ -12,22 +12,16 @@ import {
   MessageIdSchema,
   UserIdSchema,
 } from "@/shared/ids";
-import { createPostgresClient } from "@/shared/infra/postgres/postgresClient";
 import {
   resetDb,
   seedConversation,
   seedMember,
   seedUser,
 } from "../../helpers/seed";
+import { createPostgresClientTest } from "test/helpers/createPostgresClientTest";
 
 describe("e2e/infra: postgres schema contracts", () => {
-  const db = createPostgresClient({
-    POSTGRES_HOST: process.env.POSTGRES_HOST ?? "",
-    POSTGRES_PORT: Number(process.env.POSTGRES_PORT ?? 5432),
-    POSTGRES_USER: process.env.POSTGRES_USER ?? "",
-    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? "",
-    POSTGRES_DATABASE: process.env.POSTGRES_DATABASE ?? "",
-  });
+  const db = createPostgresClientTest()
 
   const cid = ConversationIdSchema.parse(
     "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e10",
@@ -46,6 +40,7 @@ describe("e2e/infra: postgres schema contracts", () => {
   });
 
   afterAll(async () => {
+    await resetDb(db);
     await db.end({ timeout: 1 });
   });
 

@@ -8,8 +8,10 @@ import {
 } from "bun:test";
 import crypto from "crypto";
 import { Elysia } from "elysia";
+import { App as AppContract } from "src";
 import { makeGetConversation } from "src/features/conversations/usecases/getConversation";
 import { makeUpdateUserProfile } from "src/features/users/usecases/updateUserProfile";
+import { createSessionCookie } from "test/helpers/cookie";
 import WebSocket from "ws";
 import type * as z from "zod";
 import {
@@ -19,6 +21,7 @@ import {
   MessageIdSchema,
   UserIdSchema,
 } from "@/shared/ids";
+import { makeInMemoryCache } from "@/shared/infra/cache/inMemoryCache";
 import { createPostgresClient } from "@/shared/infra/postgres/postgresClient";
 import { sessionRoutes } from "../../../src/app/sessionRoutes";
 import { makeWsApp } from "../../../src/app/ws";
@@ -51,7 +54,7 @@ import { makeSendMessage } from "../../../src/features/messages/usecases/sendMes
 import { makeSyncMessages } from "../../../src/features/messages/usecases/syncMessages";
 import { makePostgresConversationReadsRepo } from "../../../src/features/reads/infra/postgres/conversationReadsRepo";
 import { makeUpdateReadCursor } from "../../../src/features/reads/usecases/updateReadCursor";
-import { makePostgresUserRepo } from "../../../src/shared/infra/postgres/userRepo";
+import { makePostgresUserRepo } from "../../../src/shared/features/users/infra/postgres/userRepo";
 import { uuidv7 } from "../../../src/shared/uuid";
 import {
   resetDb,
@@ -59,12 +62,6 @@ import {
   seedMember,
   seedUser,
 } from "../../helpers/seed";
-
-const extractSessionCookie = (setCookie: string): string => {
-  const m = /(?:^|,\s*)session=([^;]+)/.exec(setCookie);
-  if (!m) throw new Error(`Set-Cookie does not include session: ${setCookie}`);
-  return `session=${m[1]}`;
-};
 
 const waitForWsMessage = async (
   ws: WebSocket,
@@ -211,21 +208,6 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
   let wsUrl: string;
   let queryRepo: ReturnType<typeof makePostgresMessageQueryRepo>;
 
-  const createSessionCookie = async (userId: string): Promise<string> => {
-    const res = await fetch(`${baseUrl}/session`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-
-    expect(res.status).toBe(200);
-
-    const setCookie = res.headers.get("set-cookie");
-    if (!setCookie) throw new Error("missing set-cookie");
-
-    return extractSessionCookie(setCookie);
-  };
-
   const connectWs = async (cookieHeader: string): Promise<WebSocket> => {
     const ws = new WebSocket(wsUrl, { headers: { Cookie: cookieHeader } });
 
@@ -268,9 +250,12 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       /** noop */ return null;
     };
 
+    const cache = makeInMemoryCache();
+
     // テストでは使用しないが、AppServices型に必要なプロパティを追加
     const conversationRepo = makePostgresConversationRepo(db);
-    const userRepo = makePostgresUserRepo(db);
+    const userRepo = makePostgresUserRepo(db, cache);
+    const messageQueryRepo = makePostgresMessageQueryRepo(db);
 
     const createConversation = makeCreateConversation({
       conversationRepo,
@@ -281,8 +266,8 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
 
     const listConversations = makeListConversations({
       membersRepo,
-      messageQueryRepo: queryRepo,
       conversationRepo,
+      messageQueryRepo,
       readsRepo,
       userRepo,
     });
@@ -370,13 +355,14 @@ describe("e2e/usecases: ws chat flow (cookie auth)", () => {
       userRepo,
     };
 
+    const port = 3000;
+
     // @ts-expect-error Elysiaの型が複雑なので無視する
     app = new Elysia()
       .use(sessionRoutes)
-      .use(makeWsApp(svc))
-      .listen({ port: 0 });
+      .use(makeWsApp({ ...svc, cache }))
+      .listen({ port });
 
-    const port = getListeningPort(app);
     baseUrl = `http://localhost:${port}`;
     wsUrl = `ws://localhost:${port}/ws`;
   });

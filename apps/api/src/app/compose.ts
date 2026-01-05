@@ -1,19 +1,19 @@
 import { randomBytes } from "crypto";
 import z from "zod";
 import { env } from "@/shared/env";
+import { makePostgresUserRepo } from "@/shared/features/users/infra/postgres/userRepo";
 import {
   ConversationIdSchema,
   MessageIdSchema,
   type UserId,
   UserIdSchema,
 } from "@/shared/ids";
+import type { CacheStore } from "@/shared/infra/cache/cachePort";
+import { makeInMemoryCache } from "@/shared/infra/cache/inMemoryCache";
 import {
   createPostgresClient,
   type PostgresClient,
 } from "@/shared/infra/postgres/postgresClient";
-import { makePostgresUserRepo } from "@/shared/infra/postgres/userRepo";
-import { makeInMemoryCache } from "@/shared/infra/cache/inMemoryCache";
-import type { CacheStore } from "@/shared/infra/cache/cachePort";
 import { uuidv7 } from "@/shared/uuid";
 import { makePostgresConversationMembersRepo } from "../features/conversations/infra/postgres/conversationMembersRepo";
 import { makePostgresConversationRepo } from "../features/conversations/infra/postgres/conversationRepo";
@@ -224,8 +224,11 @@ export const composeApp = (): AppServices => {
   });
 
   const listConversations = makeListConversations({
-    db,
     membersRepo,
+    conversationRepo,
+    messageQueryRepo,
+    readsRepo,
+    userRepo,
   });
 
   const getConversation = makeGetConversation({

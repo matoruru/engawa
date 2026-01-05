@@ -63,7 +63,7 @@ export const makePostgresFriendshipsRepo = (
 
     const parsed = z.array(FriendInfoRowSchema).parse(rows);
     return parsed.map((row) => ({
-      id: row.friend_id,
+      userId: row.friend_id,
       username: row.username,
       displayName: row.display_name,
       avatarUrl: row.avatar_url,

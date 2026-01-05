@@ -94,7 +94,7 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     throw new Error("Unexpected result from createConversation");
   },
 
-  getCurrentUser: async (userId: UserId) => {
+  getCurrentUser: async (userId: UserId): Promise<{ user: { id: string; username: string; displayName: string; avatarUrl: string | null } } | { error: "USER_NOT_FOUND" }> => {
     // キャッシュから取得を試みる
     const cacheKey = `user:${userId}`;
     const cached = await svc.cache.get<{ id: string; username: string; displayName: string; avatarUrl: string | null }>(cacheKey);

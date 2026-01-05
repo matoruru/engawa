@@ -1,7 +1,9 @@
 import * as z from "zod";
-import type { UserId } from "@/shared/ids";
+import { UserIdSchema, type UserId } from "@/shared/ids";
 import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
-import type { User, UserRepository } from "@/shared/ports/users";
+import type { CacheStore } from "../../../../infra/cache/cachePort";
+import { UserSchema, type User } from "../../domain";
+import type { UserRepository } from "../../ports";
 
 const UserRowSchema = z.object({
   id: z.string(),
@@ -12,6 +14,7 @@ const UserRowSchema = z.object({
 
 export const makePostgresUserRepo = (
   db: PostgresClient,
+  cache: CacheStore,
 ): UserRepository => ({
   findByIds: async (userIds: readonly UserId[]): Promise<readonly User[]> => {
     if (userIds.length === 0) {
@@ -27,6 +30,7 @@ export const makePostgresUserRepo = (
       throw new Error("Too many userIds (max 10)");
     }
 
+    //  TODO: ここはもう少し簡略化できそう（sqlx の bind を使う）
     // 各要素を個別に展開してIN句に渡す
     // 型安全性を保つため、各要素を個別にプレースホルダーとして展開
     // テンプレートリテラル構文では動的な構築が難しいため、条件分岐で対応
@@ -106,7 +110,7 @@ export const makePostgresUserRepo = (
     const parsed = z.array(UserRowSchema).parse(rows);
 
     return parsed.map((row) => ({
-      id: String(row.id),
+      id: UserIdSchema.parse(row.id),
       username: String(row.username),
       displayName: String(row.display_name || row.username),
       avatarUrl: row.avatar_url ? String(row.avatar_url) : null,
@@ -123,13 +127,14 @@ export const makePostgresUserRepo = (
 
     if (rows.length === 0) return null;
 
-    const parsed = UserRowSchema.parse(rows[0]);
-    return {
-      id: String(parsed.id),
-      username: String(parsed.username),
-      displayName: String(parsed.display_name || parsed.username),
-      avatarUrl: parsed.avatar_url ? String(parsed.avatar_url) : null,
-    };
+    const parsedRow = UserRowSchema.parse(rows[0]);
+    const parsed = UserSchema.parse({
+      id: UserIdSchema.parse(parsedRow.id),
+      username: parsedRow.username,
+      displayName: parsedRow.display_name,
+      avatarUrl: parsedRow.avatar_url,
+    });
+    return parsed;
   },
 
   findByUsername: async (username: string): Promise<User | null> => {
@@ -142,16 +147,20 @@ export const makePostgresUserRepo = (
 
     if (rows.length === 0) return null;
 
-    const parsed = UserRowSchema.parse(rows[0]);
-    return {
-      id: String(parsed.id),
-      username: String(parsed.username),
-      displayName: String(parsed.display_name || parsed.username),
-      avatarUrl: parsed.avatar_url ? String(parsed.avatar_url) : null,
-    };
+    const parsedRow = UserRowSchema.parse(rows[0]);
+    const parsed = UserSchema.parse({
+      id: UserIdSchema.parse(parsedRow.id),
+      username: parsedRow.username,
+      displayName: parsedRow.display_name,
+      avatarUrl: parsedRow.avatar_url
+    });
+    return parsed;
   },
 
-  updateDisplayName: async (userId: UserId, displayName: string): Promise<void> => {
+  updateDisplayName: async (
+    userId: UserId,
+    displayName: string,
+  ): Promise<void> => {
     await db`
       UPDATE users
       SET display_name = ${displayName}
@@ -167,7 +176,10 @@ export const makePostgresUserRepo = (
     `;
   },
 
-  updateAvatarUrl: async (userId: UserId, avatarUrl: string | null): Promise<void> => {
+  updateAvatarUrl: async (
+    userId: UserId,
+    avatarUrl: string | null,
+  ): Promise<void> => {
     await db`
       UPDATE users
       SET avatar_url = ${avatarUrl}
@@ -175,4 +187,3 @@ export const makePostgresUserRepo = (
     `;
   },
 });
-

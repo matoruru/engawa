@@ -1,12 +1,11 @@
 import { describe, expect, it } from "bun:test";
-
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import {
   type ConversationId,
   ConversationIdSchema,
   type UserId,
   UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { ConversationRepository } from "../ports";
 import { makeGetConversation } from "./getConversation";
 
@@ -15,11 +14,18 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly members = new Set<string>();
   private readonly usersByConversation = new Map<ConversationId, UserId[]>();
 
-  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async addMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
     if (!conversationUsers.includes(userId)) {
-      this.usersByConversation.set(conversationId, [...conversationUsers, userId]);
+      this.usersByConversation.set(conversationId, [
+        ...conversationUsers,
+        userId,
+      ]);
     }
   }
 
@@ -30,18 +36,27 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
     return this.members.has(`${conversationId}|${userId}`);
   }
 
-  async listByUserId(userId: UserId): Promise<readonly ConversationId[]> {
+  async listByUserId(_userId: UserId): Promise<readonly ConversationId[]> {
     return [];
   }
 
-  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+  async listByConversationId(
+    conversationId: ConversationId,
+  ): Promise<readonly UserId[]> {
     return this.usersByConversation.get(conversationId) || [];
   }
 
-  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async removeMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.delete(`${conversationId}|${userId}`);
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
-    this.usersByConversation.set(conversationId, conversationUsers.filter(uid => uid !== userId));
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
+    this.usersByConversation.set(
+      conversationId,
+      conversationUsers.filter((uid) => uid !== userId),
+    );
   }
 }
 
@@ -54,7 +69,10 @@ class InMemoryConversationRepo implements ConversationRepository {
     this.titles.set(String(conversationId), null);
   }
 
-  async updateTitle(conversationId: ConversationId, title: string | null): Promise<void> {
+  async updateTitle(
+    conversationId: ConversationId,
+    title: string | null,
+  ): Promise<void> {
     this.titles.set(String(conversationId), title);
   }
 
@@ -148,7 +166,9 @@ describe("getConversation", () => {
     const membersRepo = new InMemoryMembersRepo();
     const conversationRepo = new InMemoryConversationRepo();
 
-    const nonExistentCid = ConversationIdSchema.parse("01890b42-8d57-7b8f-9f2b-ef2d6c1f6e99");
+    const nonExistentCid = ConversationIdSchema.parse(
+      "01890b42-8d57-7b8f-9f2b-ef2d6c1f6e99",
+    );
 
     const getConversation = makeGetConversation({
       conversationRepo,
@@ -163,4 +183,3 @@ describe("getConversation", () => {
     expect(result.kind).toBe("notFound");
   });
 });
-

@@ -1,12 +1,11 @@
 import { describe, expect, it } from "bun:test";
-
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import {
   type ConversationId,
   ConversationIdSchema,
   type UserId,
   UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import { makeLeaveConversation } from "./leaveConversation";
 
 // --- Test doubles ---
@@ -15,17 +14,27 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly conversationsByUser = new Map<UserId, ConversationId[]>();
   private readonly usersByConversation = new Map<ConversationId, UserId[]>();
 
-  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async addMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
-    
+
     const userConversations = this.conversationsByUser.get(userId) || [];
     if (!userConversations.includes(conversationId)) {
-      this.conversationsByUser.set(userId, [...userConversations, conversationId]);
+      this.conversationsByUser.set(userId, [
+        ...userConversations,
+        conversationId,
+      ]);
     }
-    
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
+
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
     if (!conversationUsers.includes(userId)) {
-      this.usersByConversation.set(conversationId, [...conversationUsers, userId]);
+      this.usersByConversation.set(conversationId, [
+        ...conversationUsers,
+        userId,
+      ]);
     }
   }
 
@@ -40,16 +49,28 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
     return this.conversationsByUser.get(userId) || [];
   }
 
-  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+  async listByConversationId(
+    conversationId: ConversationId,
+  ): Promise<readonly UserId[]> {
     return this.usersByConversation.get(conversationId) || [];
   }
 
-  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async removeMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.delete(`${conversationId}|${userId}`);
     const userConversations = this.conversationsByUser.get(userId) || [];
-    this.conversationsByUser.set(userId, userConversations.filter(cid => cid !== conversationId));
-    const conversationUsers = this.usersByConversation.get(conversationId) || [];
-    this.usersByConversation.set(conversationId, conversationUsers.filter(uid => uid !== userId));
+    this.conversationsByUser.set(
+      userId,
+      userConversations.filter((cid) => cid !== conversationId),
+    );
+    const conversationUsers =
+      this.usersByConversation.get(conversationId) || [];
+    this.usersByConversation.set(
+      conversationId,
+      conversationUsers.filter((uid) => uid !== userId),
+    );
   }
 }
 
@@ -93,4 +114,3 @@ describe("leaveConversation", () => {
     }
   });
 });
-

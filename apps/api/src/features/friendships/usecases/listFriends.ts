@@ -1,6 +1,6 @@
 import * as z from "zod";
-import { UserIdSchema } from "@/shared/ids";
-import type { UserRepository } from "@/shared/ports/users";
+import type { UserRepository } from "@/shared/features/users/ports";
+import { type UserId, UserIdSchema } from "@/shared/ids";
 import type { FriendshipsRepository } from "../ports";
 
 export const ListFriendsInputSchema = z.object({
@@ -14,7 +14,7 @@ export interface ListFriendsDeps {
 }
 
 export type FriendInfo = {
-  id: string;
+  userId: UserId;
   username: string;
   displayName: string;
 };

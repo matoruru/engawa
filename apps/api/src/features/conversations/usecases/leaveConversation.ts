@@ -1,13 +1,14 @@
 import * as z from "zod";
-import type { ConversationId, UserId } from "@/shared/ids";
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import { ConversationIdSchema, UserIdSchema } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 
 export const LeaveConversationInputSchema = z.object({
   userId: UserIdSchema,
   conversationId: ConversationIdSchema,
 });
-export type LeaveConversationInput = z.infer<typeof LeaveConversationInputSchema>;
+export type LeaveConversationInput = z.infer<
+  typeof LeaveConversationInputSchema
+>;
 
 export interface LeaveConversationDeps {
   membersRepo: ConversationMembersRepository;
@@ -34,4 +35,3 @@ export const makeLeaveConversation =
 
     return { kind: "left" };
   };
-

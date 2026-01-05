@@ -1,9 +1,6 @@
 import * as z from "zod";
-import {
-  ConversationIdSchema,
-  UserIdSchema,
-} from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
+import { ConversationIdSchema, UserIdSchema } from "@/shared/ids";
 
 export const AddMemberToConversationInputSchema = z.object({
   userId: UserIdSchema,
@@ -51,4 +48,3 @@ export const makeAddMemberToConversation =
 
     return { kind: "added" };
   };
-

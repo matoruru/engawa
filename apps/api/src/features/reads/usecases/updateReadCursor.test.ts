@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import {
   type ConversationId,
   ConversationIdSchema,
@@ -7,7 +7,6 @@ import {
   type UserId,
   UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { ReadCursor } from "../domain";
 import type { ConversationReadsRepository } from "../ports";
 import { makeUpdateReadCursor } from "./updateReadCursor";
@@ -15,7 +14,10 @@ import { makeUpdateReadCursor } from "./updateReadCursor";
 // --- Test doubles ---
 class InMemoryMembersRepo implements ConversationMembersRepository {
   private readonly members = new Set<string>();
-  async addMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async addMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.add(`${conversationId}|${userId}`);
   }
   async isMember(
@@ -27,10 +29,15 @@ class InMemoryMembersRepo implements ConversationMembersRepository {
   async listByUserId(userId: UserId): Promise<readonly ConversationId[]> {
     return [];
   }
-  async listByConversationId(conversationId: ConversationId): Promise<readonly UserId[]> {
+  async listByConversationId(
+    conversationId: ConversationId,
+  ): Promise<readonly UserId[]> {
     return [];
   }
-  async removeMember(conversationId: ConversationId, userId: UserId): Promise<void> {
+  async removeMember(
+    conversationId: ConversationId,
+    userId: UserId,
+  ): Promise<void> {
     this.members.delete(`${conversationId}|${userId}`);
   }
 }

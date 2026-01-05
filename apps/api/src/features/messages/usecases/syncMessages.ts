@@ -1,10 +1,10 @@
 import * as z from "zod";
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import {
   ConversationIdSchema,
   MessageIdSchema,
   UserIdSchema,
 } from "@/shared/ids";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 import type { Message } from "../domain";
 import type {
   ListByConversationParams,

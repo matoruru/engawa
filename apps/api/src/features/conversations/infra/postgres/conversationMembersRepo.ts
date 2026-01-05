@@ -1,8 +1,8 @@
 import * as z from "zod";
+import type { ConversationMembersRepository } from "@/shared/features/conversations/ports";
 import type { ConversationId, UserId } from "@/shared/ids";
 import { ConversationIdSchema, UserIdSchema } from "@/shared/ids";
 import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
-import type { ConversationMembersRepository } from "@/shared/ports/conversationMembers";
 
 const ExistsRowSchema = z.object({ ok: z.number().int() });
 const ConversationIdRowSchema = z.object({ conversation_id: z.string() });

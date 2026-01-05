@@ -4,12 +4,17 @@ import type { PostgresClient } from "@/shared/infra/postgres/postgresClient";
 export const resetDb = async (db: PostgresClient): Promise<void> => {
   await db`
     TRUNCATE TABLE
-      conversation_reads,
-      messages,
+      account,
       conversation_members,
+      conversation_reads,
       conversations,
+      friendships,
+      invites,
+      messages,
+      session,
+      users,
       user_identities,
-      users
+      verification
     RESTART IDENTITY
     CASCADE
   `;

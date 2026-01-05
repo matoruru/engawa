@@ -6,25 +6,20 @@ import {
   expect,
   it,
 } from "bun:test";
-import {
-  ConversationIdSchema,
-  UserIdSchema,
-} from "@/shared/ids";
+import { ConversationIdSchema, UserIdSchema } from "@/shared/ids";
+import { makeInMemoryCache } from "@/shared/infra/cache/inMemoryCache";
 import { createPostgresClient } from "@/shared/infra/postgres/postgresClient";
-import { makePostgresConversationRepo } from "../../../src/features/conversations/infra/postgres/conversationRepo";
 import { makePostgresConversationMembersRepo } from "../../../src/features/conversations/infra/postgres/conversationMembersRepo";
-import { makePostgresUserRepo } from "../../../src/shared/infra/postgres/userRepo";
-import { makeCreateConversation } from "../../../src/features/conversations/usecases/createConversation";
-import { makeListConversations } from "../../../src/features/conversations/usecases/listConversations";
+import { makePostgresConversationRepo } from "../../../src/features/conversations/infra/postgres/conversationRepo";
 import { makeAddMemberToConversation } from "../../../src/features/conversations/usecases/addMemberToConversation";
+import { makeCreateConversation } from "../../../src/features/conversations/usecases/createConversation";
 import { makeListConversationMembers } from "../../../src/features/conversations/usecases/listConversationMembers";
+import { makeListConversations } from "../../../src/features/conversations/usecases/listConversations";
 import { makePostgresMessageQueryRepo } from "../../../src/features/messages/infra/postgres/messageQueryRepo";
 import { makePostgresConversationReadsRepo } from "../../../src/features/reads/infra/postgres/conversationReadsRepo";
-import {
-  resetDb,
-  seedUser,
-} from "../../helpers/seed";
+import { makePostgresUserRepo } from "../../../src/shared/features/users/infra/postgres/userRepo";
 import { uuidv7 } from "../../../src/shared/uuid";
+import { resetDb, seedUser } from "../../helpers/seed";
 
 describe("e2e/usecases: conversations flow", () => {
   const db = createPostgresClient({
@@ -47,7 +42,11 @@ describe("e2e/usecases: conversations flow", () => {
     await resetDb(db);
     await seedUser(db, { id: uid1, username: "alice", displayName: "Alice" });
     await seedUser(db, { id: uid2, username: "bob", displayName: "Bob" });
-    await seedUser(db, { id: uid3, username: "charlie", displayName: "Charlie" });
+    await seedUser(db, {
+      id: uid3,
+      username: "charlie",
+      displayName: "Charlie",
+    });
   });
 
   afterAll(async () => {
@@ -55,8 +54,12 @@ describe("e2e/usecases: conversations flow", () => {
   });
 
   it("createConversation -> listConversations", async () => {
+    const cache = makeInMemoryCache();
     const conversationRepo = makePostgresConversationRepo(db);
     const membersRepo = makePostgresConversationMembersRepo(db);
+    const messageQueryRepo = makePostgresMessageQueryRepo(db);
+    const readsRepo = makePostgresConversationReadsRepo(db);
+    const userRepo = makePostgresUserRepo(db, cache);
 
     const createConversation = makeCreateConversation({
       conversationRepo,
@@ -65,13 +68,10 @@ describe("e2e/usecases: conversations flow", () => {
       now: () => new Date("2025-12-27T00:00:00.000Z"),
     });
 
-    const messageQueryRepo = makePostgresMessageQueryRepo(db);
-    const readsRepo = makePostgresConversationReadsRepo(db);
-    const userRepo = makePostgresUserRepo(db);
     const listConversations = makeListConversations({
       membersRepo,
-      messageQueryRepo,
       conversationRepo,
+      messageQueryRepo,
       readsRepo,
       userRepo,
     });
@@ -92,7 +92,7 @@ describe("e2e/usecases: conversations flow", () => {
     expect(l1.kind).toBe("ok");
     if (l1.kind === "ok") {
       expect(l1.conversations.length).toBe(2);
-      const conversationIds = l1.conversations.map(c => c.conversationId);
+      const conversationIds = l1.conversations.map((c) => c.conversationId);
       expect(conversationIds).toContain(cid1);
       expect(conversationIds).toContain(cid2);
     }
@@ -106,9 +106,10 @@ describe("e2e/usecases: conversations flow", () => {
   });
 
   it("createConversation -> addMemberToConversation -> listConversationMembers", async () => {
+    const cache = makeInMemoryCache();
     const conversationRepo = makePostgresConversationRepo(db);
     const membersRepo = makePostgresConversationMembersRepo(db);
-    const userRepo = makePostgresUserRepo(db);
+    const userRepo = makePostgresUserRepo(db, cache);
 
     const createConversation = makeCreateConversation({
       conversationRepo,
@@ -156,9 +157,9 @@ describe("e2e/usecases: conversations flow", () => {
     if (l1.kind === "ok") {
       expect(l1.members.length).toBe(3);
       const memberIds = l1.members.map((m) => m.id);
-      expect(memberIds).toContain(String(uid1));
-      expect(memberIds).toContain(String(uid2));
-      expect(memberIds).toContain(String(uid3));
+      expect(memberIds).toContain(uid1);
+      expect(memberIds).toContain(uid2);
+      expect(memberIds).toContain(uid3);
     }
 
     // uid2からもメンバー一覧を取得できる
@@ -247,9 +248,10 @@ describe("e2e/usecases: conversations flow", () => {
   });
 
   it("listConversationMembers returns forbidden when requester is not a member", async () => {
+    const cache = makeInMemoryCache();
     const conversationRepo = makePostgresConversationRepo(db);
     const membersRepo = makePostgresConversationMembersRepo(db);
-    const userRepo = makePostgresUserRepo(db);
+    const userRepo = makePostgresUserRepo(db, cache);
 
     const createConversation = makeCreateConversation({
       conversationRepo,
@@ -280,4 +282,3 @@ describe("e2e/usecases: conversations flow", () => {
     }
   });
 });
-
