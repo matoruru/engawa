@@ -178,7 +178,7 @@ export const composeApp = (): AppServices => {
 
   // shared port
   const membersRepo = makePostgresConversationMembersRepo(db);
-  const userRepo = makePostgresUserRepo(db);
+  const userRepo = makePostgresUserRepo(db, cache);
   const friendshipsRepo = makePostgresFriendshipsRepo(db);
   const invitesRepo = makePostgresInvitesRepo(db);
 

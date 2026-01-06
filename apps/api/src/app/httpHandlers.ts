@@ -23,6 +23,7 @@ import { SendMessageInputSchema } from "../features/messages/usecases/sendMessag
 import { SyncMessagesInputSchema } from "../features/messages/usecases/syncMessages";
 import { UpdateReadCursorInputSchema } from "../features/reads/usecases/updateReadCursor";
 import type { AppServices } from "./compose";
+import { User } from "@/shared/features/users/domain";
 
 // HTTPは senderId/userId を受け取らない。認証から userId を取得して使う。
 const SendMessageHttpBodySchema = z.object({
@@ -94,10 +95,10 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     throw new Error("Unexpected result from createConversation");
   },
 
-  getCurrentUser: async (userId: UserId): Promise<{ user: { id: string; username: string; displayName: string; avatarUrl: string | null } } | { error: "USER_NOT_FOUND" }> => {
+  getCurrentUser: async (userId: UserId): Promise<{user: User} | {error: "USER_NOT_FOUND"}> => {
     // キャッシュから取得を試みる
     const cacheKey = `user:${userId}`;
-    const cached = await svc.cache.get<{ id: string; username: string; displayName: string; avatarUrl: string | null }>(cacheKey);
+    const cached = await svc.cache.get<User>(cacheKey);
     if (cached) {
       return { user: cached };
     }
