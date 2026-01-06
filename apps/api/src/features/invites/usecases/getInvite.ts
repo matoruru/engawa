@@ -56,7 +56,7 @@ export const makeGetInvite =
       kind: "ok",
       invite: {
         token: invite.token,
-        inviterId: String(invite.inviterId),
+        inviterId: invite.inviterId,
         expiresAt: invite.expiresAt.toISOString(),
         acceptedAt: invite.acceptedAt
           ? new Date(invite.acceptedAt).toISOString()

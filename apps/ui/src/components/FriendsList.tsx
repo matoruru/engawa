@@ -1,14 +1,14 @@
 import { Check, Copy, Link2, UserMinus, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useApi } from "@/hooks/useApi";
 import { useLocation } from "../hooks/useLocation";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
-import { useApi } from "@/hooks/useApi";
 
 interface Friend {
-  id: string;
+  userId: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
@@ -44,7 +44,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
         setIsLoading(false);
       }
     };
-  
+
     loadFriends();
   }, [app]);
 
@@ -84,8 +84,8 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
     if (!friendToRemove) return;
 
     try {
-      setIsAdding(friendToRemove.id);
-      const response = await fetch(`${apiUrl}/friends/${friendToRemove.id}`, {
+      setIsAdding(friendToRemove.userId);
+      const response = await fetch(`${apiUrl}/friends/${friendToRemove.userId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -173,7 +173,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
               <div className="space-y-2">
                 {friends.map((friend) => (
                   <div
-                    key={friend.id}
+                    key={friend.userId}
                     className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
                   >
                     <div className="flex items-center gap-3">
@@ -200,7 +200,7 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
                     </div>
                     <Button
                       onClick={() => handleRemoveFriend(friend)}
-                      disabled={isAdding === friend.id}
+                      disabled={isAdding === friend.userId}
                       size="sm"
                       variant="ghost"
                     >
@@ -232,11 +232,11 @@ export function FriendsList({ apiUrl }: FriendsListProps) {
               </Button>
               <Button
                 onClick={confirmRemoveFriend}
-                disabled={isAdding === friendToRemove.id}
+                disabled={isAdding === friendToRemove.userId}
                 variant="destructive"
                 className="bg-red-500 hover:bg-red-600"
               >
-                {isAdding === friendToRemove.id ? "削除中..." : "削除"}
+                {isAdding === friendToRemove.userId ? "削除中..." : "削除"}
               </Button>
             </div>
           </div>

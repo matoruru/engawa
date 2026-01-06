@@ -1,8 +1,7 @@
 import * as z from "zod";
-import { randomBytes } from "crypto";
 import { UserIdSchema } from "@/shared/ids";
+import type { InviteToken } from "../domain";
 import type { InvitesRepository } from "../ports";
-import { InviteTokenSchema, type InviteToken } from "../domain";
 
 export const CreateInviteInputSchema = z.object({
   userId: UserIdSchema,
@@ -48,4 +47,3 @@ export const makeCreateInvite =
       inviteUrl,
     };
   };
-

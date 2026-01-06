@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v7 as uuidv7 } from "uuid";
+import type { Message } from "../../../api/src/features/messages/domain";
 import { useApi } from "./useApi";
 import { useWebSocket, type WsMessage } from "./useWebSocket";
 
 // APIのMessage型からWsMessage型への変換
-function convertApiMessageToWsMessage(message: {
-  readonly [x: string]: unknown;
-  readonly messageText: string & { __brand?: "MessageText" };
-  readonly createdAt: Date;
-}): WsMessage {
+function convertApiMessageToWsMessage(message: Message): WsMessage {
   return {
     messageId: String(message.messageId),
     conversationId: String(message.conversationId),
@@ -175,7 +172,7 @@ export function useConversationMessages({
     const unsubscribeMessagesSynced = ws.on("messages.synced", (event) => {
       if (event.payload.kind === "ok") {
         const apiMessages = event.payload.messages;
-        const wsMessages: WsMessage[] = Array.from(apiMessages).map(
+        const wsMessages: WsMessage[] = apiMessages.map(
           convertApiMessageToWsMessage,
         );
         setMessages(wsMessages);
@@ -280,4 +277,3 @@ export function useConversationMessages({
     sendMessage,
   };
 }
-

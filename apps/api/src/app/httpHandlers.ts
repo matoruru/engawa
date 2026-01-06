@@ -1,4 +1,5 @@
 import * as z from "zod";
+import type { User } from "@/shared/features/users/domain";
 import type { ConversationId, UserId } from "@/shared/ids";
 import {
   ConversationIdSchema,
@@ -12,18 +13,20 @@ import { LeaveConversationInputSchema } from "../features/conversations/usecases
 import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
 import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
 import { UpdateConversationTitleInputSchema } from "../features/conversations/usecases/updateConversationTitle";
-import { ListFriendsInputSchema } from "../features/friendships/usecases/listFriends";
+import { ListFriendsInputSchema, ListFriendsResult } from "../features/friendships/usecases/listFriends";
 import { RemoveFriendInputSchema } from "../features/friendships/usecases/removeFriend";
 import { InviteTokenSchema } from "../features/invites/domain";
-import { AcceptInviteInputSchema } from "../features/invites/usecases/acceptInvite";
+import { AcceptInviteInputSchema, AcceptInviteResult } from "../features/invites/usecases/acceptInvite";
 import { CreateInviteInputSchema } from "../features/invites/usecases/createInvite";
-import { GetInviteInputSchema } from "../features/invites/usecases/getInvite";
+import {
+  GetInviteInputSchema,
+  type GetInviteResult,
+} from "../features/invites/usecases/getInvite";
 import { MessageTextSchema } from "../features/messages/domain";
 import { SendMessageInputSchema } from "../features/messages/usecases/sendMessage";
 import { SyncMessagesInputSchema } from "../features/messages/usecases/syncMessages";
 import { UpdateReadCursorInputSchema } from "../features/reads/usecases/updateReadCursor";
 import type { AppServices } from "./compose";
-import { User } from "@/shared/features/users/domain";
 
 // HTTPは senderId/userId を受け取らない。認証から userId を取得して使う。
 const SendMessageHttpBodySchema = z.object({
@@ -95,7 +98,9 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     throw new Error("Unexpected result from createConversation");
   },
 
-  getCurrentUser: async (userId: UserId): Promise<{user: User} | {error: "USER_NOT_FOUND"}> => {
+  getCurrentUser: async (
+    userId: UserId,
+  ): Promise<{ user: User } | { error: "USER_NOT_FOUND" }> => {
     // キャッシュから取得を試みる
     const cacheKey = `user:${userId}`;
     const cached = await svc.cache.get<User>(cacheKey);
@@ -246,11 +251,11 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     throw new Error("Unexpected result from updateConversationTitle");
   },
 
-  listFriends: async (userId: UserId) => {
+  listFriends: async (userId: UserId): Promise<ListFriendsResult> => {
     const input = ListFriendsInputSchema.parse({ userId });
     const result = await svc.listFriends(input);
     if (result.kind === "ok") {
-      return { friends: result.friends };
+      return { kind: "ok", friends: result.friends };
     }
     throw new Error("Unexpected result from listFriends");
   },
@@ -264,41 +269,19 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     throw new Error("Unexpected result from createInvite");
   },
 
-  getInvite: async (token: string) => {
+  getInvite: async (token: string): Promise<GetInviteResult> => {
     const input = GetInviteInputSchema.parse({
       token: InviteTokenSchema.parse(token),
     });
-    const result = await svc.getInvite(input);
-    if (result.kind === "ok") {
-      return { invite: result.invite };
-    } else if (result.kind === "notFound") {
-      return { error: "NOT_FOUND" };
-    } else if (result.kind === "expired") {
-      return { error: "EXPIRED" };
-    } else if (result.kind === "alreadyAccepted") {
-      return { error: "ALREADY_ACCEPTED" };
-    }
-    throw new Error("Unexpected result from getInvite");
+    return await svc.getInvite(input);
   },
 
-  acceptInvite: async (userId: UserId, token: string) => {
+  acceptInvite: async (userId: UserId, token: string): Promise<AcceptInviteResult> => {
     const input = AcceptInviteInputSchema.parse({
       token: InviteTokenSchema.parse(token),
       userId,
     });
-    const result = await svc.acceptInvite(input);
-    if (result.kind === "accepted") {
-      return { success: true };
-    } else if (result.kind === "notFound") {
-      return { success: false, error: "NOT_FOUND" };
-    } else if (result.kind === "expired") {
-      return { success: false, error: "EXPIRED" };
-    } else if (result.kind === "alreadyAccepted") {
-      return { success: false, error: "ALREADY_ACCEPTED" };
-    } else if (result.kind === "conflict") {
-      return { success: false, error: result.reason };
-    }
-    throw new Error("Unexpected result from acceptInvite");
+    return await svc.acceptInvite(input);
   },
 
   removeFriend: async (userId: UserId, body: unknown) => {

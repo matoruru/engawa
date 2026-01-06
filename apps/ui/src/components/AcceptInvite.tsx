@@ -1,10 +1,17 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { UserCheck, AlertCircle } from "lucide-react";
+import { AlertCircle, UserCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import { useApi } from "@/hooks/useApi";
 import { useAuth } from "../hooks/useAuth";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 
 interface AcceptInviteProps {
   apiUrl: string;
@@ -13,14 +20,6 @@ interface AcceptInviteProps {
 export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  
-  if (!token) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">無効な招待リンクです</p>
-      </div>
-    );
-  }
 
   const [invite, setInvite] = useState<{
     token: string;
@@ -34,41 +33,36 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
       avatarUrl: string | null;
     } | null;
   } | null>(null);
-  const [status, setStatus] = useState<"loading" | "notFound" | "expired" | "alreadyAccepted" | "ready" | "accepted">("loading");
+  const [status, setStatus] = useState<
+    | "loading"
+    | "notFound"
+    | "expired"
+    | "alreadyAccepted"
+    | "conflict"
+    | "ready"
+    | "accepted"
+  >("loading");
   const [isAccepting, setIsAccepting] = useState(false);
   const { user, appUserId } = useAuth(apiUrl);
+  const app = useApi(apiUrl);
 
   useEffect(() => {
+    if (!token) {
+      return;
+    }
+
     const loadInvite = async () => {
       try {
-        const response = await api.invites.get({ token });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.invite) {
-            const inviteData = data.invite as {
-              token: string;
-              inviterId: string;
-              expiresAt: string;
-              acceptedAt: string | null;
-              inviter: {
-                id: string;
-                username: string;
-                displayName: string;
-                avatarUrl: string | null;
-              } | null;
-            };
-            setInvite(inviteData);
-            setStatus("ready");
-          } else if (data.error) {
-            const error = data.error as string;
-            if (error === "NOT_FOUND") {
-              setStatus("notFound");
-            } else if (error === "EXPIRED") {
-              setStatus("expired");
-            } else if (error === "ALREADY_ACCEPTED") {
-              setStatus("alreadyAccepted");
-            }
+        const { data } = await app.invites({ token }).get();
+        if (data) {
+          switch (data.kind) {
+            case "ok":
+              setInvite(data.invite);
+              setStatus("ready");
+              break;
+            default:
+              setStatus(data.kind);
+              break;
           }
         } else {
           setStatus("notFound");
@@ -80,7 +74,15 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
     };
 
     loadInvite();
-  }, [token, apiUrl]);
+  }, [token, app]);
+
+  if (!token) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">無効な招待リンクです</p>
+      </div>
+    );
+  }
 
   const handleAccept = async () => {
     if (!user || !appUserId) {
@@ -90,36 +92,17 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
 
     try {
       setIsAccepting(true);
-      const response = await fetch(`${apiUrl}/invites/${token}/accept`, {
-        method: "POST",
-        credentials: "include",
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStatus("accepted");
-        } else if (data.error) {
-          const error = data.error as string;
-          if (error === "NOT_FOUND") {
-            setStatus("notFound");
-          } else if (error === "EXPIRED") {
-            setStatus("expired");
-          } else if (error === "ALREADY_ACCEPTED") {
-            setStatus("alreadyAccepted");
-          }
-        }
-      } else {
-        const data = await response.json();
-        if (data.error) {
-          const error = data.error as string;
-          if (error === "NOT_FOUND") {
-            setStatus("notFound");
-          } else if (error === "EXPIRED") {
-            setStatus("expired");
-          } else if (error === "ALREADY_ACCEPTED") {
-            setStatus("alreadyAccepted");
-          }
+      const { data } = await app
+        .invites({ token })
+        .accept.post({ userId: appUserId });
+      if (data) {
+        switch (data.kind) {
+          case "accepted":
+            setStatus("accepted");
+            break;
+          default:
+            setStatus(data.kind);
+            break;
         }
       }
     } catch (error) {
@@ -155,9 +138,7 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
               <AlertCircle className="h-5 w-5 text-destructive" />
               招待が見つかりません
             </CardTitle>
-            <CardDescription>
-              この招待リンクは無効です。
-            </CardDescription>
+            <CardDescription>この招待リンクは無効です。</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -173,9 +154,7 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
               <AlertCircle className="h-5 w-5 text-destructive" />
               招待の有効期限が切れています
             </CardTitle>
-            <CardDescription>
-              この招待リンクは期限切れです。
-            </CardDescription>
+            <CardDescription>この招待リンクは期限切れです。</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -210,7 +189,8 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
               友達になりました！
             </CardTitle>
             <CardDescription>
-              {invite?.inviter?.displayName || "ユーザー"}さんと友達になりました。
+              {invite?.inviter?.displayName || "ユーザー"}
+              さんと友達になりました。
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -236,7 +216,9 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
           <CardDescription>
             {invite?.inviter ? (
               <>
-                <span className="font-medium">{invite.inviter.displayName}</span>
+                <span className="font-medium">
+                  {invite.inviter.displayName}
+                </span>
                 さんからの招待
               </>
             ) : (
@@ -249,8 +231,8 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-20 w-20">
                 {invite.inviter.avatarUrl ? (
-                  <AvatarImage 
-                    src={invite.inviter.avatarUrl} 
+                  <AvatarImage
+                    src={invite.inviter.avatarUrl}
                     alt={invite.inviter.displayName}
                     className="object-cover"
                   />
@@ -261,8 +243,12 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
                 )}
               </Avatar>
               <div className="text-center">
-                <h2 className="text-lg font-semibold">{invite.inviter.displayName}</h2>
-                <p className="text-sm text-muted-foreground">@{invite.inviter.username}</p>
+                <h2 className="text-lg font-semibold">
+                  {invite.inviter.displayName}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  @{invite.inviter.username}
+                </p>
               </div>
             </div>
           )}
@@ -296,4 +282,3 @@ export function AcceptInvite({ apiUrl }: AcceptInviteProps) {
     </div>
   );
 }
-

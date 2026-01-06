@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 
 interface Friend {
-  id: string;
+  userId: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
@@ -41,13 +41,13 @@ export function AddFriendToConversationDialog({
         setIsLoading(true);
         const friendsResponse = await app.friends.get();
         if (friendsResponse.data && "friends" in friendsResponse.data) {
-          const friendsData = friendsResponse.data.friends as Array<{
-            id: string;
-            username: string;
-            displayName: string;
-            avatarUrl: string | null;
-          }>;
-          setFriends(friendsData);
+          const friendsData = friendsResponse.data.friends;
+          setFriends(friendsData.map((friend) => ({
+            userId: friend.userId,
+            username: friend.username,
+            displayName: friend.displayName,
+            avatarUrl: friend.avatarUrl,
+          })));
         }
 
         // 会話のメンバーを取得
@@ -80,7 +80,7 @@ export function AddFriendToConversationDialog({
 
   // 既にメンバーの友達を除外
   const availableFriends = friends.filter(
-    (friend) => !members.some((member) => member.id === friend.id),
+    (friend) => !members.some((member) => member.userId === friend.userId),
   );
 
   const handleInvite = async (friendId: string) => {
@@ -102,7 +102,7 @@ export function AddFriendToConversationDialog({
         const data = await response.json();
         if (data.success) {
           // メンバーリストを更新
-          const friend = friends.find((f) => f.id === friendId);
+          const friend = friends.find((f) => f.userId === friendId);
           if (friend) {
             setMembers((prev) => [...prev, friend]);
           }
@@ -156,7 +156,7 @@ export function AddFriendToConversationDialog({
             <div className="space-y-2">
               {availableFriends.map((friend) => (
                 <div
-                  key={friend.id}
+                  key={friend.userId}
                   className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
                 >
                   <div className="flex items-center gap-3">
@@ -182,13 +182,13 @@ export function AddFriendToConversationDialog({
                     </div>
                   </div>
                   <Button
-                    onClick={() => handleInvite(friend.id)}
-                    disabled={isInviting === friend.id}
+                    onClick={() => handleInvite(friend.userId)}
+                    disabled={isInviting === friend.userId}
                     size="sm"
                     variant="outline"
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
-                    {isInviting === friend.id ? "追加中..." : "追加"}
+                    {isInviting === friend.userId ? "追加中..." : "追加"}
                   </Button>
                 </div>
               ))}

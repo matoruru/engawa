@@ -1,8 +1,8 @@
 import * as z from "zod";
 import { UserIdSchema } from "@/shared/ids";
+import type { FriendshipsRepository } from "../../friendships/ports";
 import { InviteTokenSchema } from "../domain";
 import type { InvitesRepository } from "../ports";
-import type { FriendshipsRepository } from "../../friendships/ports";
 
 export const AcceptInviteInputSchema = z.object({
   token: InviteTokenSchema,
@@ -63,4 +63,3 @@ export const makeAcceptInvite =
 
     return { kind: "accepted" };
   };
-
