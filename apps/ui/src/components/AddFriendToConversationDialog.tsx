@@ -1,7 +1,5 @@
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@engawa/contracts";
 import { UserPlus, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApi } from "@/hooks/useApi";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -42,12 +40,14 @@ export function AddFriendToConversationDialog({
         const friendsResponse = await app.friends.get();
         if (friendsResponse.data && "friends" in friendsResponse.data) {
           const friendsData = friendsResponse.data.friends;
-          setFriends(friendsData.map((friend) => ({
-            userId: friend.userId,
-            username: friend.username,
-            displayName: friend.displayName,
-            avatarUrl: friend.avatarUrl,
-          })));
+          setFriends(
+            friendsData.map((friend) => ({
+              userId: friend.userId,
+              username: friend.username,
+              displayName: friend.displayName,
+              avatarUrl: friend.avatarUrl,
+            })),
+          );
         }
 
         // 会話のメンバーを取得

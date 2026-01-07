@@ -9,11 +9,16 @@ export interface WsMessage {
   createdAt: string;
 }
 
+export type WsEnvelope<TType extends string = string, TPayload = unknown> = {
+  type: TType;
+  payload: TPayload;
+};
+
 export interface WebSocketClient {
   isConnected: boolean;
   socketId: string | null;
-  send: (evt: any) => void;
-  on: (type: string, listener: (event: any) => void) => () => void;
+  send: <T>(evt: T) => void;
+  on: <T = unknown>(type: string, listener: (event: T) => void) => () => void;
   connect: () => void;
   disconnect: () => void;
 }
@@ -37,7 +42,7 @@ export function useWebSocket(
   const reconnectTimeoutRef = useRef<number | null>(null);
   const shouldReconnectRef = useRef(true);
 
-  const listenersRef = useRef(new Map<string, Set<(event: any) => void>>());
+  const listenersRef = useRef(new Map<string, Set<(event: unknown) => void>>());
 
   const clearReconnectTimer = useCallback(() => {
     if (reconnectTimeoutRef.current != null) {
@@ -94,9 +99,29 @@ export function useWebSocket(
 
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        listenersRef.current.get(data.type)?.forEach((fn) => fn(data));
-        listenersRef.current.get("*")?.forEach((fn) => fn(data));
+        const parsed: unknown = JSON.parse(String(event.data));
+
+        // type でディスパッチするため、最低限 object かを確認
+        if (typeof parsed === "object" && parsed !== null && "type" in parsed) {
+          const msg = parsed as { type: string };
+
+          const typedListeners = listenersRef.current.get(msg.type);
+          if (typedListeners) {
+            typedListeners.forEach((fn) => {
+              fn(parsed);
+            });
+          }
+
+          const wildcardListeners = listenersRef.current.get("*");
+          if (wildcardListeners) {
+            wildcardListeners.forEach((fn) => {
+              fn(parsed);
+            });
+          }
+        } else {
+          // 期待フォーマット外は捨てる（必要ならログ）
+          // console.warn("Unexpected WS message:", parsed);
+        }
       } catch (e) {
         console.error("Failed to parse WebSocket message:", e, event.data);
       }
@@ -125,7 +150,7 @@ export function useWebSocket(
     };
   }, [url, clearReconnectTimer, reconnectDelayMs]);
 
-  const send = useCallback((evt: any) => {
+  const send = useCallback(<T>(evt: T) => {
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(evt));
@@ -134,28 +159,54 @@ export function useWebSocket(
     }
   }, []);
 
-  const on = useCallback((type: string, listener: (event: any) => void) => {
-    if (!listenersRef.current.has(type))
-      listenersRef.current.set(type, new Set());
-    listenersRef.current.get(type)!.add(listener);
-    return () => listenersRef.current.get(type)?.delete(listener);
+  const on = useCallback(<T>(type: string, listener: (event: T) => void) => {
+    const map = listenersRef.current;
+    const set = map.get(type) ?? new Set<(event: unknown) => void>();
+
+    // listener は unknown を受けてから T にキャストして呼ぶ
+    const wrapped = (event: unknown) => {
+      listener(event as T);
+    };
+
+    set.add(wrapped);
+    if (!map.has(type)) map.set(type, set);
+
+    return () => {
+      const current = map.get(type);
+      if (!current) return;
+
+      current.delete(wrapped); // delete の戻り値(boolean)は返さない
+      if (current.size === 0) {
+        map.delete(type);
+      }
+    };
   }, []);
 
   // enabledで接続を制御
   useEffect(() => {
     if (!enabled) {
       disconnect();
-      return;
+      // EffectCallback の戻り値を常に「void | Destructor」にする
+      return () => {
+        // すでに disconnect 済みでも安全
+        disconnect();
+      };
     }
+
     connect();
     return () => disconnect();
   }, [enabled, connect, disconnect]);
 
   useEffect(() => {
-    const unsub = on("server.hello", (event) => {
-      setSocketId(event.payload.socketId);
-    });
-    return unsub;
+    const unsub = on<WsEnvelope<"server.hello", { socketId: string }>>(
+      "server.hello",
+      (event) => {
+        setSocketId(event.payload.socketId);
+      },
+    );
+    return () => {
+      unsub();
+    };
   }, [on]);
 
   return useMemo(

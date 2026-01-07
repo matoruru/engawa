@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { v7 as uuidv7 } from "uuid";
 import type { Message } from "../../../api/src/features/messages/domain";
 import { useApi } from "./useApi";
-import type { WebSocketClient, WsMessage } from "./useWebSocket";
+import type { WebSocketClient, WsEnvelope, WsMessage } from "./useWebSocket";
 
 function convertApiMessageToWsMessage(message: Message): WsMessage {
   return {
@@ -19,6 +19,23 @@ function convertApiMessageToWsMessage(message: Message): WsMessage {
           : new Date(message.createdAt).toISOString(),
   };
 }
+
+type MessageCreatedEvent = WsEnvelope<"message.created", WsMessage>;
+
+type MessagesSyncedOkPayload = {
+  kind: "ok";
+  messages: Message[];
+};
+
+type MessagesSyncedOtherPayload = {
+  // サーバ実装次第で "error" などがあり得るので広めに受ける
+  kind: string;
+};
+
+type MessagesSyncedEvent = WsEnvelope<
+  "messages.synced",
+  MessagesSyncedOkPayload | MessagesSyncedOtherPayload
+>;
 
 export interface UseConversationMessagesOptions {
   conversationId: string;
@@ -125,52 +142,58 @@ export function useConversationMessages({
 
   // WSイベントの処理
   useEffect(() => {
-    const unsubscribeMessageCreated = ws.on("message.created", (event) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.messageId === event.payload.messageId))
-          return prev;
+    const unsubscribeMessageCreated = ws.on<MessageCreatedEvent>(
+      "message.created",
+      (event) => {
+        setMessages((prev) => {
+          if (prev.some((m) => m.messageId === event.payload.messageId))
+            return prev;
 
-        const existingIndex = prev.findIndex(
-          (m) => m.clientMessageId === event.payload.clientMessageId,
-        );
-        if (existingIndex >= 0) {
-          const next = [...prev];
-          next[existingIndex] = event.payload;
-          return next;
+          const existingIndex = prev.findIndex(
+            (m) => m.clientMessageId === event.payload.clientMessageId,
+          );
+          if (existingIndex >= 0) {
+            const next = [...prev];
+            next[existingIndex] = event.payload;
+            return next;
+          }
+          return [...prev, event.payload];
+        });
+
+        if (event.payload.conversationId === conversationId) {
+          ws.send({
+            type: "read.update",
+            payload: {
+              conversationId,
+              lastReadMessageId: event.payload.messageId,
+            },
+          });
+          updateUnreadCount?.(conversationId, 0);
         }
-        return [...prev, event.payload];
-      });
+      },
+    );
 
-      if (event.payload.conversationId === conversationId) {
-        ws.send({
-          type: "read.update",
-          payload: {
-            conversationId,
-            lastReadMessageId: event.payload.messageId,
-          },
-        });
-        updateUnreadCount?.(conversationId, 0);
-      }
-    });
+    const unsubscribeMessagesSynced = ws.on<MessagesSyncedEvent>(
+      "messages.synced",
+      (event) => {
+        if (event.payload.kind !== "ok" || !("messages" in event.payload)) return;
 
-    const unsubscribeMessagesSynced = ws.on("messages.synced", (event) => {
-      if (event.payload.kind !== "ok") return;
+        const wsMessages: WsMessage[] = event.payload.messages.map(
+          convertApiMessageToWsMessage,
+        );
+        setMessages(wsMessages);
+        setIsLoading(false);
 
-      const wsMessages: WsMessage[] = event.payload.messages.map(
-        convertApiMessageToWsMessage,
-      );
-      setMessages(wsMessages);
-      setIsLoading(false);
-
-      if (wsMessages.length > 0) {
-        const latest = wsMessages[wsMessages.length - 1];
-        ws.send({
-          type: "read.update",
-          payload: { conversationId, lastReadMessageId: latest.messageId },
-        });
-        updateUnreadCount?.(conversationId, 0);
-      }
-    });
+        if (wsMessages.length > 0) {
+          const latest = wsMessages[wsMessages.length - 1];
+          ws.send({
+            type: "read.update",
+            payload: { conversationId, lastReadMessageId: latest.messageId },
+          });
+          updateUnreadCount?.(conversationId, 0);
+        }
+      },
+    );
 
     return () => {
       unsubscribeMessageCreated();

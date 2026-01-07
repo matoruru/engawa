@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useApi } from "@/hooks/useApi";
 import { useConversationMessages } from "@/hooks/useConversationMessages";
 import { cn } from "@/lib/utils";
-import { useWebSocket } from "../hooks/useWebSocket";
+import { useWebSocket, type WsEnvelope } from "../hooks/useWebSocket";
 import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -18,6 +18,14 @@ interface ChatProps {
   onBack?: () => void;
   updateUnreadCount?: (conversationId: string, unreadCount: number) => void;
 }
+
+type TypingPayload = {
+  conversationId: string;
+  userId: string;
+};
+
+type TypingStartedEvent = WsEnvelope<"typing.started", TypingPayload>;
+type TypingStoppedEvent = WsEnvelope<"typing.stopped", TypingPayload>;
 
 export function Chat({
   conversationId,
@@ -213,43 +221,49 @@ export function Chat({
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubscribeTypingStarted = on("typing.started", (event) => {
-      if (
-        event.payload.conversationId === conversationId &&
-        event.payload.userId !== currentUserId
-      ) {
-        setTypingUsers((prev) => new Set(prev).add(event.payload.userId));
+    const unsubscribeTypingStarted = on<TypingStartedEvent>(
+      "typing.started",
+      (event) => {
+        if (
+          event.payload.conversationId === conversationId &&
+          event.payload.userId !== currentUserId
+        ) {
+          setTypingUsers((prev) => new Set(prev).add(event.payload.userId));
 
-        const timeoutId = window.setTimeout(() => {
+          const timeoutId = window.setTimeout(() => {
+            setTypingUsers((prev) => {
+              const next = new Set(prev);
+              next.delete(event.payload.userId);
+              return next;
+            });
+          }, 3000);
+
+          const existingTimeout = typingTimeoutRef.current.get(
+            event.payload.userId,
+          );
+          if (existingTimeout) clearTimeout(existingTimeout);
+          typingTimeoutRef.current.set(event.payload.userId, timeoutId);
+        }
+      },
+    );
+
+    const unsubscribeTypingStopped = on<TypingStoppedEvent>(
+      "typing.stopped",
+      (event) => {
+        if (
+          event.payload.conversationId === conversationId &&
+          event.payload.userId !== currentUserId
+        ) {
           setTypingUsers((prev) => {
             const next = new Set(prev);
             next.delete(event.payload.userId);
             return next;
           });
-        }, 3000);
-
-        const existingTimeout = typingTimeoutRef.current.get(
-          event.payload.userId,
-        );
-        if (existingTimeout) clearTimeout(existingTimeout);
-        typingTimeoutRef.current.set(event.payload.userId, timeoutId);
-      }
-    });
-
-    const unsubscribeTypingStopped = on("typing.stopped", (event) => {
-      if (
-        event.payload.conversationId === conversationId &&
-        event.payload.userId !== currentUserId
-      ) {
-        setTypingUsers((prev) => {
-          const next = new Set(prev);
-          next.delete(event.payload.userId);
-          return next;
-        });
-        const timeoutId = typingTimeoutRef.current.get(event.payload.userId);
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-    });
+          const timeoutId = typingTimeoutRef.current.get(event.payload.userId);
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+      },
+    );
 
     return () => {
       unsubscribeTypingStarted();

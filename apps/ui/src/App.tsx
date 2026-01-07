@@ -1,6 +1,4 @@
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@engawa/contracts";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -10,6 +8,7 @@ import {
   useNavigate,
   useParams,
 } from "react-router";
+import type { WsMessagePayload } from "../../api/src/app/wsTypes";
 import { AcceptInvite } from "./components/AcceptInvite";
 import { Chat } from "./components/Chat";
 import { ConversationList } from "./components/ConversationList";
@@ -81,7 +80,7 @@ function AppContent() {
   useEffect(() => {
     if (!user || !ws.isConnected) return;
 
-    const unsubscribe = ws.on("message.created", (event) => {
+    const unsubscribe = ws.on<WsMessagePayload>("message.created", (event) => {
       const { conversationId, senderId, messageText } = event.payload;
       const currentConversationId = currentConversationIdRef.current;
 

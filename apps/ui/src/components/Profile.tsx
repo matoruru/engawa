@@ -1,7 +1,5 @@
-import { treaty } from "@elysiajs/eden";
-import type { App as AppContract } from "@engawa/contracts";
 import { Check, LogOut, Pencil, User as UserIcon, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApi } from "@/hooks/useApi";
 import { cn } from "@/lib/utils";
 import { FriendsList } from "./FriendsList";

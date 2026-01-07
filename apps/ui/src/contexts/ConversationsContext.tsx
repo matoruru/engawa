@@ -1,6 +1,8 @@
 import {
   createContext,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
   useCallback,
   useContext,
   useMemo,
@@ -21,7 +23,7 @@ type ConversationPreview = {
 
 interface ConversationsContextType {
   conversations: ConversationPreview[];
-  setConversations: (conversations: ConversationPreview[]) => void;
+  setConversations: Dispatch<SetStateAction<ConversationPreview[]>>;
   updateConversation: (
     conversationId: string,
     updates: Partial<ConversationPreview>,
