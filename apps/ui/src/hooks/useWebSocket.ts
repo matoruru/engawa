@@ -147,6 +147,8 @@ export function useWebSocket(
         () => connect(),
         reconnectDelayMs,
       );
+
+      wsRef.current = null; // close後のソケットを保持しない（次回connectの判定を正しくする）
     };
   }, [url, clearReconnectTimer, reconnectDelayMs]);
 
