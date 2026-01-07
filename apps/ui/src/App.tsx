@@ -24,7 +24,7 @@ import { useApi } from "./hooks/useApi";
 import { useAuth } from "./hooks/useAuth";
 import { useBadge } from "./hooks/useBadge";
 import { useNotifications } from "./hooks/useNotifications";
-import { useWebSocket } from "./hooks/useWebSocket";
+import { useWebSocket, WebSocketClient } from "./hooks/useWebSocket";
 
 type ConversationPreview = {
   conversationId: string;
@@ -53,7 +53,9 @@ function AppContent() {
   const currentConversationIdRef = useRef<string | null>(null);
   const conversationsRef = useRef(conversations);
   const { showNotification, requestPermission } = useNotifications();
-  const ws = useWebSocket(constants.WS_URL);
+
+  // ユーザーが存在する場合（ログイン後）のみWebSocketを接続
+  const ws = useWebSocket(constants.WS_URL, { enabled: !!user });
 
   // conversationsの最新値をrefに保持
   useEffect(() => {
@@ -249,6 +251,7 @@ function AppContent() {
             currentUserId={appUserId || ""}
             onBack={() => navigate("/")}
             updateUnreadCount={updateUnreadCount}
+            ws={ws}
           />
         }
       />
@@ -275,11 +278,13 @@ function ConversationChat({
   currentUserId,
   onBack,
   updateUnreadCount,
+  ws,
 }: {
   apiUrl: string;
   currentUserId: string;
   onBack: () => void;
   updateUnreadCount: (conversationId: string, unreadCount: number) => void;
+  ws: WebSocketClient;
 }) {
   const { conversationId } = useParams<{ conversationId: string }>();
 
@@ -293,9 +298,9 @@ function ConversationChat({
         conversationId={conversationId}
         currentUserId={currentUserId}
         apiUrl={apiUrl}
-        wsUrl={constants.WS_URL}
         onBack={onBack}
         updateUnreadCount={updateUnreadCount}
+        ws={ws}
       />
     </div>
   );

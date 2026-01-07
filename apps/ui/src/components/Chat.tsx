@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useApi } from "@/hooks/useApi";
 import { useConversationMessages } from "@/hooks/useConversationMessages";
 import { cn } from "@/lib/utils";
-import { useWebSocket, type WsEnvelope } from "../hooks/useWebSocket";
+import type { WebSocketClient, WsEnvelope } from "../hooks/useWebSocket"; // ← useWebSocketはimportしない
 import { AddFriendToConversationDialog } from "./AddFriendToConversationDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -14,7 +14,7 @@ interface ChatProps {
   conversationId: string;
   currentUserId: string;
   apiUrl: string;
-  wsUrl: string;
+  ws: WebSocketClient; // ← 追加
   onBack?: () => void;
   updateUnreadCount?: (conversationId: string, unreadCount: number) => void;
 }
@@ -31,7 +31,7 @@ export function Chat({
   conversationId,
   currentUserId,
   apiUrl,
-  wsUrl,
+  ws,
   onBack,
   updateUnreadCount,
 }: ChatProps) {
@@ -61,8 +61,7 @@ export function Chat({
 
   const app = useApi(apiUrl);
 
-  // WebSocketはここで1回だけ
-  const ws = useWebSocket(wsUrl, { enabled: true });
+  // WebSocketは親から受け取る（二重接続しない）
   const { isConnected, send, on } = ws;
 
   // useConversationMessagesはwsを受け取るだけ（中でuseWebSocketしない）
