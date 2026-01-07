@@ -9,34 +9,87 @@ export interface WsMessage {
   createdAt: string;
 }
 
-export function useWebSocket(url: string) {
+export interface WebSocketClient {
+  isConnected: boolean;
+  socketId: string | null;
+  send: (evt: any) => void;
+  on: (type: string, listener: (event: any) => void) => () => void;
+  connect: () => void;
+  disconnect: () => void;
+}
+
+type UseWebSocketOptions = {
+  enabled?: boolean;
+  reconnectDelayMs?: number;
+};
+
+export function useWebSocket(
+  url: string,
+  options?: UseWebSocketOptions,
+): WebSocketClient {
+  const enabled = options?.enabled ?? true;
+  const reconnectDelayMs = options?.reconnectDelayMs ?? 5000;
+
   const [isConnected, setIsConnected] = useState(false);
   const [socketId, setSocketId] = useState<string | null>(null);
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const shouldReconnectRef = useRef(true);
+
   const listenersRef = useRef(new Map<string, Set<(event: any) => void>>());
 
-  const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimeoutRef.current != null) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    wsRef.current?.close();
-    wsRef.current = null;
   }, []);
 
+  const disconnect = useCallback(() => {
+    shouldReconnectRef.current = false;
+    clearReconnectTimer();
+
+    const ws = wsRef.current;
+    if (ws) {
+      // 手動close → oncloseで再接続しないためにハンドラを先に外す
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+
+      try {
+        ws.close(1000, "client disconnect");
+      } catch {
+        // ignore
+      }
+    }
+
+    wsRef.current = null;
+    setIsConnected(false);
+    setSocketId(null);
+  }, [clearReconnectTimer]);
+
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    shouldReconnectRef.current = true;
+
+    const cur = wsRef.current;
+    if (
+      cur &&
+      (cur.readyState === WebSocket.OPEN ||
+        cur.readyState === WebSocket.CONNECTING)
+    ) {
+      return; // CONNECTING中に新規作らない
+    }
+
+    clearReconnectTimer();
 
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setIsConnected(true);
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
+      clearReconnectTimer();
     };
 
     ws.onmessage = (event) => {
@@ -45,24 +98,39 @@ export function useWebSocket(url: string) {
         listenersRef.current.get(data.type)?.forEach((fn) => fn(data));
         listenersRef.current.get("*")?.forEach((fn) => fn(data));
       } catch (e) {
-        console.error("Failed to parse WebSocket message:", e);
+        console.error("Failed to parse WebSocket message:", e, event.data);
       }
     };
 
-    ws.onerror = (e) => console.error("WebSocket error:", e);
+    ws.onerror = (e) => {
+      // onerrorは情報が薄い。原因はonclose(code/reason)やNetworkのWSで見るのが有効
+      console.error("WebSocket error:", e);
+    };
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       setIsConnected(false);
       setSocketId(null);
-      reconnectTimeoutRef.current = window.setTimeout(() => connect(), 5000);
+
+      console.warn("WebSocket closed:", {
+        code: ev.code,
+        reason: ev.reason,
+        wasClean: ev.wasClean,
+      });
+
+      if (!shouldReconnectRef.current) return;
+      reconnectTimeoutRef.current = window.setTimeout(
+        () => connect(),
+        reconnectDelayMs,
+      );
     };
-  }, [url]);
+  }, [url, clearReconnectTimer, reconnectDelayMs]);
 
   const send = useCallback((evt: any) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(evt));
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(evt));
     } else {
-      console.warn("WebSocket is not connected");
+      console.warn("WebSocket is not connected", ws?.readyState);
     }
   }, []);
 
@@ -73,10 +141,15 @@ export function useWebSocket(url: string) {
     return () => listenersRef.current.get(type)?.delete(listener);
   }, []);
 
+  // enabledで接続を制御
   useEffect(() => {
+    if (!enabled) {
+      disconnect();
+      return;
+    }
     connect();
     return () => disconnect();
-  }, [connect, disconnect]);
+  }, [enabled, connect, disconnect]);
 
   useEffect(() => {
     const unsub = on("server.hello", (event) => {

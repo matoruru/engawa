@@ -47,31 +47,32 @@ export function Chat({
       avatarUrl: string | null;
     }>
   >([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<Map<string, number>>(new Map());
 
   const app = useApi(apiUrl);
-  const ws = useWebSocket(wsUrl);
 
-  // メッセージ管理をuseConversationMessagesフックに委譲
+  // WebSocketはここで1回だけ
+  const ws = useWebSocket(wsUrl, { enabled: true });
+  const { isConnected, send, on } = ws;
+
+  // useConversationMessagesはwsを受け取るだけ（中でuseWebSocketしない）
   const { messages, isLoading, isSending, sendMessage } =
     useConversationMessages({
       conversationId,
       currentUserId,
       apiUrl,
-      wsUrl,
+      ws,
       updateUnreadCount,
     });
 
-  // メッセージをスクロール位置の最下部に表示
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom();
-    }
+    if (messages.length > 0) scrollToBottom();
   }, [messages.length, scrollToBottom]);
 
   // 会話タイトルを取得
@@ -102,7 +103,7 @@ export function Chat({
           .conversations({ conversationId })
           .members.get();
         if (response.data && "members" in response.data) {
-          const members = response.data.members as Array<{
+          const m = response.data.members as Array<{
             id: string;
             username: string;
             displayName: string;
@@ -112,14 +113,14 @@ export function Chat({
             string,
             { displayName: string; avatarUrl: string | null }
           >();
-          members.forEach((member) => {
+          m.forEach((member) => {
             avatarMap.set(member.id, {
               displayName: member.displayName,
               avatarUrl: member.avatarUrl,
             });
           });
           setMemberAvatars(avatarMap);
-          setMembers(members);
+          setMembers(m);
         }
       } catch (error) {
         console.error("Failed to load members:", error);
@@ -128,7 +129,6 @@ export function Chat({
     loadMembers();
   }, [conversationId, app]);
 
-  // メッセージ送信ハンドラ
   const handleSend = useCallback(async () => {
     if (!input.trim() || isSending) return;
     const messageText = input.trim();
@@ -145,14 +145,6 @@ export function Chat({
     }
   };
 
-  const handleCompositionStart = () => {
-    setIsComposing(true);
-  };
-
-  const handleCompositionEnd = () => {
-    setIsComposing(false);
-  };
-
   const formatTime = (date: string | Date) => {
     try {
       const d = typeof date === "string" ? new Date(date) : date;
@@ -166,52 +158,47 @@ export function Chat({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name: string) =>
+    name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
 
   const typingStateRef = useRef<"idle" | "started">("idle");
   const startTimerRef = useRef<number | null>(null);
   const stopTimerRef = useRef<number | null>(null);
 
-  // タイピング開始/停止の処理
+  // タイピング開始/停止（send依存にする。wsオブジェクト丸ごと依存しない）
   useEffect(() => {
-    if (!ws.isConnected) return;
+    if (!isConnected) return;
 
     const trimmed = input.trim();
 
-    // timer reset（入力が来るたびに「最後の入力時刻」を更新する）
     if (startTimerRef.current) window.clearTimeout(startTimerRef.current);
     if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current);
     startTimerRef.current = null;
     stopTimerRef.current = null;
 
-    // 入力が空：初期状態でもここに来るが、started じゃないなら何もしない
     if (trimmed === "") {
       if (typingStateRef.current === "started") {
-        ws.send({ type: "typing.stop", payload: { conversationId } });
+        send({ type: "typing.stop", payload: { conversationId } });
         typingStateRef.current = "idle";
       }
       return;
     }
 
-    // 入力がある：まだ started を送ってないなら debounce して start
     if (typingStateRef.current === "idle") {
       startTimerRef.current = window.setTimeout(() => {
-        ws.send({ type: "typing.start", payload: { conversationId } });
+        send({ type: "typing.start", payload: { conversationId } });
         typingStateRef.current = "started";
       }, 500);
     }
 
-    // 無入力が続いたら stop（入力が続く限りこのタイマーは延長される）
     stopTimerRef.current = window.setTimeout(() => {
       if (typingStateRef.current === "started") {
-        ws.send({ type: "typing.stop", payload: { conversationId } });
+        send({ type: "typing.stop", payload: { conversationId } });
         typingStateRef.current = "idle";
       }
     }, 3000);
@@ -220,19 +207,19 @@ export function Chat({
       if (startTimerRef.current) window.clearTimeout(startTimerRef.current);
       if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current);
     };
-  }, [input, conversationId, ws.isConnected, ws]);
+  }, [input, conversationId, isConnected, send]);
 
-  // タイピングイベントの受信
+  // タイピングイベント受信
   useEffect(() => {
-    if (!ws.isConnected) return;
+    if (!isConnected) return;
 
-    const unsubscribeTypingStarted = ws.on("typing.started", (event) => {
+    const unsubscribeTypingStarted = on("typing.started", (event) => {
       if (
         event.payload.conversationId === conversationId &&
         event.payload.userId !== currentUserId
       ) {
         setTypingUsers((prev) => new Set(prev).add(event.payload.userId));
-        // 3秒後に自動的にタイピング停止
+
         const timeoutId = window.setTimeout(() => {
           setTypingUsers((prev) => {
             const next = new Set(prev);
@@ -240,17 +227,16 @@ export function Chat({
             return next;
           });
         }, 3000);
+
         const existingTimeout = typingTimeoutRef.current.get(
           event.payload.userId,
         );
-        if (existingTimeout) {
-          clearTimeout(existingTimeout);
-        }
+        if (existingTimeout) clearTimeout(existingTimeout);
         typingTimeoutRef.current.set(event.payload.userId, timeoutId);
       }
     });
 
-    const unsubscribeTypingStopped = ws.on("typing.stopped", (event) => {
+    const unsubscribeTypingStopped = on("typing.stopped", (event) => {
       if (
         event.payload.conversationId === conversationId &&
         event.payload.userId !== currentUserId
@@ -261,9 +247,7 @@ export function Chat({
           return next;
         });
         const timeoutId = typingTimeoutRef.current.get(event.payload.userId);
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
+        if (timeoutId) clearTimeout(timeoutId);
       }
     });
 
@@ -271,12 +255,10 @@ export function Chat({
       unsubscribeTypingStarted();
       unsubscribeTypingStopped();
     };
-  }, [ws.isConnected, conversationId, currentUserId, ws]);
+  }, [isConnected, conversationId, currentUserId, on]);
 
   const handleLeaveConversation = async () => {
-    if (!confirm("この会話から脱会しますか？")) {
-      return;
-    }
+    if (!confirm("この会話から脱会しますか？")) return;
 
     try {
       setIsLeaving(true);
@@ -290,14 +272,8 @@ export function Chat({
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success) {
-          // 会話一覧に戻る
-          if (onBack) {
-            onBack();
-          }
-        } else {
-          alert("脱会に失敗しました");
-        }
+        if (data.success) onBack?.();
+        else alert("脱会に失敗しました");
       } else {
         alert("脱会に失敗しました");
       }
@@ -337,9 +313,7 @@ export function Chat({
 
   return (
     <div className="flex h-dvh flex-col bg-background">
-      {/* ヘッダー */}
       <div className="sticky top-0 z-10 border-b border-border bg-card">
-        {/* メンバー一覧 */}
         <div className="px-4 py-2 border-b border-border">
           <div className="flex items-center gap-2 overflow-x-auto">
             {members.map((member) => {
@@ -368,6 +342,7 @@ export function Chat({
               );
             })}
           </div>
+
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               {onBack && (
@@ -380,6 +355,7 @@ export function Chat({
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
+
               {isEditingTitle ? (
                 <div className="flex items-center gap-2">
                   <input
@@ -388,9 +364,8 @@ export function Chat({
                     onChange={(e) => setTitleInput(e.target.value)}
                     onBlur={handleSaveTitle}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSaveTitle();
-                      } else if (e.key === "Escape") {
+                      if (e.key === "Enter") handleSaveTitle();
+                      else if (e.key === "Escape") {
                         setIsEditingTitle(false);
                         setTitleInput(conversationTitle || "");
                       }
@@ -414,18 +389,20 @@ export function Chat({
                 </button>
               )}
             </div>
+
             <div className="flex items-center gap-2">
               <div
                 className={cn(
                   "text-xs px-2 py-1 rounded-full border shrink-0",
-                  ws.isConnected
+                  isConnected
                     ? "text-muted-foreground border-border bg-muted/30"
                     : "text-amber-700 border-amber-200 bg-amber-50",
                 )}
-                title={ws.isConnected ? "接続済み" : "接続中"}
+                title={isConnected ? "接続済み" : "接続中"}
               >
-                {ws.isConnected ? "オンライン" : "接続中…"}
+                {isConnected ? "オンライン" : "接続中…"}
               </div>
+
               <Button
                 onClick={() => setShowInviteDialog(true)}
                 variant="ghost"
@@ -434,6 +411,7 @@ export function Chat({
               >
                 <UserPlus className="h-4 w-4" />
               </Button>
+
               <Button
                 onClick={handleLeaveConversation}
                 variant="ghost"
@@ -449,7 +427,6 @@ export function Chat({
         </div>
       </div>
 
-      {/* メッセージリスト */}
       <ScrollArea className="flex-1 min-h-0 px-4">
         <div className="py-4 space-y-4">
           {isLoading ? (
@@ -493,6 +470,7 @@ export function Chat({
                       </span>
                     </div>
                   )}
+
                   <div
                     className={cn(
                       "flex flex-col gap-1 max-w-[80%] sm:max-w-[70%]",
@@ -523,9 +501,7 @@ export function Chat({
         </div>
       </ScrollArea>
 
-      {/* 入力エリア */}
       <div className="border-t border-border bg-card p-4 safe-area-inset-bottom">
-        {/* タイピング表示（スクロール領域の外に固定） */}
         <div
           className={cn(
             "h-6 flex items-center gap-2 text-xs text-muted-foreground transition-opacity",
@@ -555,20 +531,21 @@ export function Chat({
             がタイプ中...
           </span>
         </div>
+
         <div className="flex gap-2 items-end">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
             placeholder="メッセージを入力..."
             className="min-h-[60px] max-h-[120px] resize-none text-base"
             rows={1}
           />
           <Button
             onClick={handleSend}
-            disabled={!input.trim() || isSending || !ws.isConnected}
+            disabled={!input.trim() || isSending || !isConnected}
             size="icon"
             className="h-[60px] w-[60px] shrink-0 rounded-full"
           >
@@ -577,15 +554,12 @@ export function Chat({
         </div>
       </div>
 
-      {/* 友達追加ダイアログ */}
       {showInviteDialog && (
         <AddFriendToConversationDialog
           conversationId={conversationId}
           apiUrl={apiUrl}
           onClose={() => setShowInviteDialog(false)}
-          onInviteSuccess={() => {
-            // 追加成功時の処理（必要に応じて）
-          }}
+          onInviteSuccess={() => {}}
         />
       )}
     </div>

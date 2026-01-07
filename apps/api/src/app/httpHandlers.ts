@@ -13,10 +13,16 @@ import { LeaveConversationInputSchema } from "../features/conversations/usecases
 import { ListConversationMembersInputSchema } from "../features/conversations/usecases/listConversationMembers";
 import { ListConversationsInputSchema } from "../features/conversations/usecases/listConversations";
 import { UpdateConversationTitleInputSchema } from "../features/conversations/usecases/updateConversationTitle";
-import { ListFriendsInputSchema, ListFriendsResult } from "../features/friendships/usecases/listFriends";
+import {
+  ListFriendsInputSchema,
+  type ListFriendsResult,
+} from "../features/friendships/usecases/listFriends";
 import { RemoveFriendInputSchema } from "../features/friendships/usecases/removeFriend";
 import { InviteTokenSchema } from "../features/invites/domain";
-import { AcceptInviteInputSchema, AcceptInviteResult } from "../features/invites/usecases/acceptInvite";
+import {
+  AcceptInviteInputSchema,
+  type AcceptInviteResult,
+} from "../features/invites/usecases/acceptInvite";
 import { CreateInviteInputSchema } from "../features/invites/usecases/createInvite";
 import {
   GetInviteInputSchema,
@@ -276,7 +282,10 @@ export const makeHttpHandlers = (svc: AppServices) => ({
     return await svc.getInvite(input);
   },
 
-  acceptInvite: async (userId: UserId, token: string): Promise<AcceptInviteResult> => {
+  acceptInvite: async (
+    userId: UserId,
+    token: string,
+  ): Promise<AcceptInviteResult> => {
     const input = AcceptInviteInputSchema.parse({
       token: InviteTokenSchema.parse(token),
       userId,
