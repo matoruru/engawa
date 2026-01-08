@@ -9,13 +9,13 @@ import { sessionRoutes } from "./app/sessionRoutes";
 import { makeWsApp } from "./app/ws";
 import { env } from "./shared/env";
 import { ConversationIdSchema, UserIdSchema } from "./shared/ids";
-import { testDBConnection as testDBConnectionForApplication } from "./shared/infra/postgres/postgresClient";
+import { checkDBConnection as checkDBConnectionForApplication } from "./shared/infra/postgres/postgresClient";
 
 const services = composeApp();
 
 // Test DB connection at startup
 await checkDBConnectionForAuth();
-await testDBConnectionForApplication(services.db);
+await checkDBConnectionForApplication(services.db);
 
 const handlers = makeHttpHandlers(services);
 

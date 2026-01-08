@@ -24,7 +24,7 @@ import { useApi } from "./hooks/useApi";
 import { useAuth } from "./hooks/useAuth";
 import { useBadge } from "./hooks/useBadge";
 import { useNotifications } from "./hooks/useNotifications";
-import { useWebSocket, WebSocketClient } from "./hooks/useWebSocket";
+import { useWebSocket, type WebSocketClient } from "./hooks/useWebSocket";
 
 type ConversationPreview = {
   conversationId: string;
